@@ -1,9 +1,21 @@
 #include "model/DeepSeek.hpp"
 
-    DeepSeek::DeepSeek(const std::string& apiKey) : apiKey(apiKey){}
+    DeepSeek::DeepSeek(const std::string& apiKey, std::size_t contextMessageCount) : apiKey(apiKey), contextMessageCount(contextMessageCount){}
 
-    std::string DeepSeek::chat(const Conversation& conversation){
-        nlohmann::json messages = conversation.toJson();
+    std::string DeepSeek::chat(const Conversation& conversation, const Profile& profile){
+
+        Message systemMessage = profile.getSystemMessage();
+
+        nlohmann::json messages = nlohmann::json::array();
+
+        messages.push_back(systemMessage.toJson());
+
+        std::vector<Message> recentMessages =
+    conversation.getRecentMessages(contextMessageCount);
+
+        for(const auto& cell : recentMessages){
+            messages.push_back(cell.toJson());
+        }
 
         nlohmann::json request;
 
@@ -20,7 +32,21 @@
 
         nlohmann::json responseJson = nlohmann::json::parse(response);
 
-        std::cout << "Total tokens : " << responseJson["usage"]["total_tokens"].get<int>() << std::endl;
+        if(responseJson.contains("error")){
+            std::cout << responseJson["error"]["message"] << std::endl;
+
+            return "";
+        }
+
+        if(!responseJson.contains("choices")){
+            std::cout << "There is no choices!" << std::endl;
+            return "";
+        }
+
+        if (responseJson["choices"].empty()){
+            std::cout << "Choices is empty." << std::endl;
+            return "";
+        }
 
         return responseJson["choices"][0]["message"]["content"].get<std::string>();
     }

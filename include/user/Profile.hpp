@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "chat/Message.hpp"
 #include <nlohmann/json.hpp>
 
 class Profile{
@@ -28,6 +29,8 @@ class Profile{
     nlohmann::json toJson() const;
 
     void fromJson(const nlohmann::json& data);
+
+    Message getSystemMessage() const;
 
     private:
 

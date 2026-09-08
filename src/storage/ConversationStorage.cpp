@@ -7,3 +7,21 @@ void ConversationStorage::saveConversation(const Conversation& conversation){
 
     file << conversation.toJson().dump(4);
 }
+
+Conversation ConversationStorage::loadConversation() const{
+    Conversation conversation;
+
+    std::ifstream file("data/message.json");
+
+    if(!file){
+        return conversation;
+    }
+
+    nlohmann::json data;
+
+    file >> data;
+
+    conversation.fromJson(data);
+
+    return conversation;
+}

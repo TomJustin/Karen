@@ -10,7 +10,11 @@ add_executable(
     src/main.cpp
     src/chat/Conversation.cpp
     src/network/HttpClient.cpp
-    src/Message.cpp
+    src/chat/Message.cpp
+    src/model/DeepSeek.cpp
+    src/user/Profile.cpp
+    src/storage/ConversationStorage.cpp
+    src/storage/ProfileStorage.cpp
 )
 
 target_include_directories(

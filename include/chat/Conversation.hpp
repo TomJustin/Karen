@@ -16,5 +16,9 @@ public:
 
     const std::vector<Message>& getMessages() const;
 
-    nlohmann::json toJson();
+    nlohmann::json toJson() const;
+
+    void fromJson(const nlohmann::json& data);
+
+    std::vector<Message> getRecentMessages(std::size_t count) const;
 };

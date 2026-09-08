@@ -13,4 +13,3 @@ struct Message
 
     static Message fromJson(const nlohmann::json& data);
 };
-

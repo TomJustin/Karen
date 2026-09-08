@@ -44,3 +44,13 @@ std::string Profile::getAiName() const{
 std::string Profile::getPersonality() const{
     return personality;
 }
+
+Message Profile::getSystemMessage() const{
+    Message message;
+
+    message.role = "system";
+
+    message.content = "用户的名字叫做：" + this->getUserName() + "ai的名字叫做：" + this->getAiName() + "ai的性格是：" + this->getPersonality();
+    
+    return message;
+}

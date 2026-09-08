@@ -6,5 +6,5 @@ class ConversationStorage{
     public:
     void saveConversation(const Conversation& conversation);
 
-    Conversation loadConversation();
+    Conversation loadConversation() const;
 };
