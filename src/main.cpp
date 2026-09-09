@@ -6,6 +6,7 @@
 #include "model/DeepSeek.hpp"
 #include "storage/ConversationStorage.hpp"
 #include "storage/ProfileStorage.hpp"
+#include  "storage/MemoryStorage.hpp"
 
 
 
@@ -18,6 +19,7 @@ int main()
     Profile profile;
     ConversationStorage conversationStorage;
     ProfileStorage profileStorage;
+    MemoryStorage memoryStorage;
 
     // =========================
     // 1. 读取聊天记录
@@ -37,7 +39,15 @@ int main()
     }
     
     // =========================
-    // 3. 获取 API Key
+    // 3. 读取 / 初始化Memory
+    // =========================
+
+    MemoryStore memoryStore = memoryStorage.loadMemories();
+
+    //memoryStorage.saveMemories(memoryStore);
+
+    // =========================
+    // 4. 获取 API Key
     // =========================
 
     const char* key =
@@ -61,7 +71,7 @@ int main()
     DeepSeek deepseek(apiKey, count);
 
     // =========================
-    // 4. 开始聊天
+    // 5. 开始聊天
     // =========================
 
     while (true)

@@ -3,6 +3,7 @@
 #include "chat/Conversation.hpp"
 #include "network/HttpClient.hpp"
 #include "user/Profile.hpp"
+#include "memory/MemoryStore.hpp"
 #include <iostream>
 
 class DeepSeek{

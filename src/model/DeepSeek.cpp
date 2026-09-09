@@ -1,6 +1,8 @@
 #include "model/DeepSeek.hpp"
 
-    DeepSeek::DeepSeek(const std::string& apiKey, std::size_t contextMessageCount) : apiKey(apiKey), contextMessageCount(contextMessageCount){}
+    DeepSeek::DeepSeek(const std::string& apiKey,
+         std::size_t contextMessageCount) : apiKey(apiKey),
+          contextMessageCount(contextMessageCount){}
 
     std::string DeepSeek::chat(const Conversation& conversation, const Profile& profile){
 

@@ -6,6 +6,7 @@ void ConversationStorage::saveConversation(const Conversation& conversation){
     std::ofstream file("data/message.json");
 
     file << conversation.toJson().dump(4);
+    //dump是转换为字符串
 }
 
 Conversation ConversationStorage::loadConversation() const{
