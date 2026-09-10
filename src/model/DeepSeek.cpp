@@ -2,15 +2,40 @@
 
     DeepSeek::DeepSeek(const std::string& apiKey,
          std::size_t contextMessageCount) : apiKey(apiKey),
-          contextMessageCount(contextMessageCount){}
+          contextMessageCount(contextMessageCount){
 
-    std::string DeepSeek::chat(const Conversation& conversation, const Profile& profile){
+          }
+
+
+
+    std::string DeepSeek::chat(
+    const Conversation& conversation,
+    const Profile& profile,
+    const MemoryStore& memoryStore
+){
 
         Message systemMessage = profile.getSystemMessage();
 
         nlohmann::json messages = nlohmann::json::array();
 
         messages.push_back(systemMessage.toJson());
+
+        if(!memoryStore.getMemories().empty()){
+            Message memoryMessage;
+            memoryMessage.role = "system";
+
+            std::string memoryContent =
+        "以下是关于用户的长期记忆：\n";
+
+                for(const auto& cell : memoryStore.getMemories()){
+                    memoryContent += "[" + cell.category + "]" + 
+                    ": " + cell.content + "\n";
+                }
+
+                memoryMessage.content = memoryContent;
+
+        messages.push_back(memoryMessage.toJson());
+        }
 
         std::vector<Message> recentMessages =
     conversation.getRecentMessages(contextMessageCount);

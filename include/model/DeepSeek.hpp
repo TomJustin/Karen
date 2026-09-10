@@ -11,7 +11,11 @@ class DeepSeek{
 
     DeepSeek(const std::string& apiKey, std::size_t contextMessageCount);
 
-    std::string chat(const Conversation& conversation, const Profile& profile);
+    std::string chat(
+    const Conversation& conversation,
+    const Profile& profile,
+    const MemoryStore& memoryStore
+);
 
     private:
 

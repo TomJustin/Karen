@@ -44,7 +44,8 @@ int main()
 
     MemoryStore memoryStore = memoryStorage.loadMemories();
 
-    //memoryStorage.saveMemories(memoryStore);
+    
+
 
     // =========================
     // 4. 获取 API Key
@@ -98,7 +99,8 @@ int main()
         std::string answer =
             deepseek.chat(
                 conversation,
-                profile
+                profile,
+                memoryStore
             );
 
         // AI 消息

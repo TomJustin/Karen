@@ -20,4 +20,8 @@ class MemoryStore{
     void clear();
 
     std::size_t size() const;
+
+    std::vector<Memory> getMemoriesByCategory(const std::string& category) const;
+
+    bool removeMemory(std::size_t index);
 };

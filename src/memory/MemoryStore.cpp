@@ -36,3 +36,23 @@
     std::size_t MemoryStore::size() const{
         return store.size();
     }
+
+    std::vector<Memory> MemoryStore::getMemoriesByCategory(const std::string& category) const{
+        std::vector<Memory> memory;
+
+        for(const auto& cell : store){
+            if(cell.category == category){
+                memory.push_back(cell);
+            }
+        }
+
+        return memory;
+    }
+
+    bool MemoryStore::removeMemory(std::size_t index){
+        if(index >= store.size()){
+            return false;
+        }
+        store.erase(store.begin() + index);
+        return true;
+    }
