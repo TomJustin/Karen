@@ -1,4 +1,5 @@
 #include "model/DeepSeek.hpp"
+#include <iostream>
 
     DeepSeek::DeepSeek(const std::string& apiKey,
          std::size_t contextMessageCount) : apiKey(apiKey),
@@ -13,41 +14,59 @@
     const Profile& profile,
     const MemoryStore& memoryStore
 ){
+    std::vector<Message> messages;
 
-        Message systemMessage = profile.getSystemMessage();
+    Message systemMessage =
+        profile.getSystemMessage();
 
-        nlohmann::json messages = nlohmann::json::array();
+    messages.push_back(systemMessage);
 
-        messages.push_back(systemMessage.toJson());
+    if (!memoryStore.getMemories().empty())
+    {
+        Message memoryMessage;
+        memoryMessage.role = "system";
 
-        if(!memoryStore.getMemories().empty()){
-            Message memoryMessage;
-            memoryMessage.role = "system";
+        std::string memoryContent =
+            "以下是关于用户的长期记忆：\n";
 
-            std::string memoryContent =
-        "以下是关于用户的长期记忆：\n";
-
-                for(const auto& cell : memoryStore.getMemories()){
-                    memoryContent += "[" + cell.category + "]" + 
-                    ": " + cell.content + "\n";
-                }
-
-                memoryMessage.content = memoryContent;
-
-        messages.push_back(memoryMessage.toJson());
+        for (const auto& cell :
+             memoryStore.getMemories())
+        {
+            memoryContent +=
+                "[" + cell.category + "]" +
+                ": " + cell.content + "\n";
         }
 
-        std::vector<Message> recentMessages =
-    conversation.getRecentMessages(contextMessageCount);
+        memoryMessage.content = memoryContent;
 
-        for(const auto& cell : recentMessages){
-            messages.push_back(cell.toJson());
-        }
+        messages.push_back(memoryMessage);
+    }
 
-        nlohmann::json request;
+    std::vector<Message> recentMessages =
+        conversation.getRecentMessages(
+            contextMessageCount
+        );
+
+    for (const auto& cell : recentMessages)
+    {
+        messages.push_back(cell);
+    }
+
+    return chat(messages);
+}
+
+    std::string DeepSeek::chat(
+            const std::vector<Message>& messages
+){
+    nlohmann::json request;
 
         request["model"] = "deepseek-v4-flash";
-        request["messages"] = messages;
+
+        for (const auto& message : messages){
+        request["messages"].push_back(
+            message.toJson()
+        );
+    }
 
         std::string body = request.dump();
 
@@ -76,4 +95,4 @@
         }
 
         return responseJson["choices"][0]["message"]["content"].get<std::string>();
-    }
+}

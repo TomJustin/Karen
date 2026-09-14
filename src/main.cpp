@@ -1,12 +1,14 @@
 #include <iostream>
-#include <cstdlib>
+
 #include <windows.h>
+#include <memory>
 
 #include "user/Profile.hpp"
-#include "model/DeepSeek.hpp"
 #include "storage/ConversationStorage.hpp"
 #include "storage/ProfileStorage.hpp"
-#include  "storage/MemoryStorage.hpp"
+#include "storage/MemoryStorage.hpp"
+#include "model/ModelFactory.hpp"
+#include "model/ModelConfig.hpp"
 
 
 
@@ -17,8 +19,11 @@ int main()
     SetConsoleCP(CP_UTF8);
 
     Profile profile;
+
     ConversationStorage conversationStorage;
+
     ProfileStorage profileStorage;
+    
     MemoryStorage memoryStorage;
 
     // =========================
@@ -26,7 +31,7 @@ int main()
     // =========================
 
     Conversation conversation = 
-                            conversationStorage.loadConversation();
+        conversationStorage.loadConversation();
 
     // =========================
     // 2. 读取 / 初始化Profile
@@ -51,25 +56,29 @@ int main()
     // 4. 获取 API Key
     // =========================
 
-    const char* key =
-        std::getenv("DEEPSEEK_API_KEY");
+    ModelConfig config;
 
-    if (key == nullptr)
+    if (!config.loadApiKey())
     {
         std::cout << "API NOT FOUND"
-                  << std::endl;
+                << std::endl;
 
         return 1;
     }
 
-    const std::string apiKey = key;
+    const std::string apiKey =
+        config.getApiKey();
 
-    std::size_t count;
+        std::size_t count;
 
-    std::cout << "请输入想要的记忆长度(轮数 * 2)：";
-    std::cin >> count;std::cin.ignore();//忽略回车，避免传入到input
+        std::cout << "请输入想要的记忆长度(轮数 * 2)：";
+        std::cin >> count; std::cin.ignore();//忽略回车，避免传入到input
 
-    DeepSeek deepseek(apiKey, count);
+        std::unique_ptr<AIModel> model =
+        ModelFactory::createModel(
+            config,
+            count
+        );
 
     // =========================
     // 5. 开始聊天
@@ -97,7 +106,7 @@ int main()
 
         // 请求 AI
         std::string answer =
-            deepseek.chat(
+            model->chat(
                 conversation,
                 profile,
                 memoryStore

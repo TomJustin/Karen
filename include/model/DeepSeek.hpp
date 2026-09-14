@@ -1,12 +1,12 @@
 #pragma once
 
-#include "chat/Conversation.hpp"
+#include "model/AIModel.hpp"
 #include "network/HttpClient.hpp"
-#include "user/Profile.hpp"
-#include "memory/MemoryStore.hpp"
+
 #include <iostream>
 
-class DeepSeek{
+class DeepSeek : public AIModel
+{
     public:
 
     DeepSeek(const std::string& apiKey, std::size_t contextMessageCount);
@@ -15,7 +15,11 @@ class DeepSeek{
     const Conversation& conversation,
     const Profile& profile,
     const MemoryStore& memoryStore
-);
+) override;
+
+    std::string chat(
+            const std::vector<Message>& messages
+) override;
 
     private:
 
