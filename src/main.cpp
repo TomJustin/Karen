@@ -9,6 +9,7 @@
 #include "storage/MemoryStorage.hpp"
 #include "model/ModelFactory.hpp"
 #include "model/ModelConfig.hpp"
+#include "memory/MemoryExtractor.hpp"
 
 
 
@@ -49,8 +50,6 @@ int main()
 
     MemoryStore memoryStore = memoryStorage.loadMemories();
 
-    
-
 
     // =========================
     // 4. 获取 API Key
@@ -79,6 +78,8 @@ int main()
             config,
             count
         );
+
+        MemoryExtractor extractor(*model);
 
     // =========================
     // 5. 开始聊天
@@ -124,6 +125,20 @@ int main()
 
         // 保存聊天记录
         conversationStorage.saveConversation(conversation);
+
+        //判断是否值得记忆
+        MemoryCandidate candidate = extractor.extract(input);
+        if(candidate.shouldRemember){
+            Memory memory;
+            
+            memory.category = candidate.category;
+            memory.content = candidate.content;
+
+            memoryStore.addMemory(memory);
+
+            memoryStorage.saveMemories(memoryStore);
+        }
+
 
         // 输出 AI 回复
         std::cout << profile.getAiName() << ": " << answer << std::endl;

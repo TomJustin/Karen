@@ -9,8 +9,10 @@
 class ModelFactory
 {
 public:
+
     static std::unique_ptr<AIModel> createModel(
     const ModelConfig& config,
     std::size_t contextMessageCount
 );
+
 };
