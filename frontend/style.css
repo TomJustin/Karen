@@ -1,0 +1,620 @@
+/* =========================
+   基础
+========================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Microsoft YaHei",
+        sans-serif;
+
+    background: #f3f4f8;
+
+    color: #2f3037;
+
+    overflow: hidden;
+}
+
+
+/* =========================
+   整个应用
+========================= */
+
+.app {
+    display: flex;
+
+    width: 100%;
+    height: 100vh;
+
+    background: #ffffff;
+}
+
+
+/* =========================
+   左侧边栏
+========================= */
+
+.sidebar {
+    width: 250px;
+
+    display: flex;
+    flex-direction: column;
+
+    background: #f8f8fb;
+
+    border-right: 1px solid #e7e7ed;
+
+    padding: 24px 16px;
+}
+
+
+/* Logo */
+
+.brand {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 0 8px 28px;
+}
+
+.brand-avatar {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: linear-gradient(
+        135deg,
+        #a78bfa,
+        #7c6ee6
+    );
+
+    color: white;
+
+    font-size: 20px;
+    font-weight: 600;
+
+    box-shadow:
+        0 6px 18px rgba(124, 110, 230, 0.25);
+}
+
+.brand h1 {
+    margin: 0;
+
+    font-size: 18px;
+
+    font-weight: 650;
+}
+
+.brand span {
+    display: block;
+
+    margin-top: 2px;
+
+    font-size: 12px;
+
+    color: #999ba8;
+}
+
+
+/* 新建聊天 */
+
+.sidebar-section {
+    margin-bottom: 28px;
+}
+
+.new-chat-button {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 11px 14px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: #eeeef7;
+
+    color: #50515b;
+
+    font-size: 14px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        transform 0.2s;
+}
+
+.new-chat-button:hover {
+    background: #e5e4f2;
+
+    transform: translateY(-1px);
+}
+
+.plus {
+    font-size: 20px;
+    font-weight: 300;
+}
+
+
+/* 最近聊天 */
+
+.section-title {
+    padding: 0 10px 10px;
+
+    font-size: 12px;
+
+    color: #a0a1ab;
+
+    font-weight: 500;
+}
+
+.chat-history {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 10px 12px;
+
+    border-radius: 9px;
+
+    color: #6b6c76;
+
+    font-size: 14px;
+
+    cursor: pointer;
+}
+
+.chat-history.active {
+    background: #eeeeF8;
+
+    color: #5751a5;
+}
+
+.history-icon {
+    font-size: 15px;
+}
+
+
+/* 左下角状态 */
+
+.sidebar-bottom {
+    margin-top: auto;
+
+    padding: 12px 10px;
+}
+
+.status {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    color: #8c8d97;
+
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: #68c58a;
+
+    box-shadow:
+        0 0 0 3px rgba(104, 197, 138, 0.12);
+}
+
+
+/* =========================
+   主区域
+========================= */
+
+.main {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+
+    background: #ffffff;
+}
+
+
+/* =========================
+   顶部
+========================= */
+
+.chat-header {
+    height: 72px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 28px;
+
+    border-bottom: 1px solid #eeeeF2;
+
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.karen-info {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+}
+
+.karen-avatar {
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: linear-gradient(
+        135deg,
+        #a78bfa,
+        #7c6ee6
+    );
+
+    color: white;
+
+    font-weight: 600;
+
+    box-shadow:
+        0 4px 12px rgba(124, 110, 230, 0.18);
+}
+
+.karen-details h2 {
+    margin: 0;
+
+    font-size: 15px;
+
+    font-weight: 600;
+}
+
+.karen-details span {
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    margin-top: 3px;
+
+    font-size: 11px;
+
+    color: #999ba5;
+}
+
+.online-dot {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: #68c58a;
+}
+
+.header-button {
+    width: 36px;
+    height: 36px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: transparent;
+
+    color: #999ba5;
+
+    font-size: 22px;
+
+    cursor: pointer;
+}
+
+.header-button:hover {
+    background: #f4f4f7;
+}
+
+
+/* =========================
+   消息区域
+========================= */
+
+.chat-messages {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow-y: auto;
+
+    padding: 30px 8% 20px;
+
+    background:
+        radial-gradient(
+            circle at 50% 0%,
+            #faf9ff 0%,
+            #ffffff 45%
+        );
+}
+
+
+/* 滚动条 */
+
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #dedee5;
+
+    border-radius: 10px;
+}
+
+
+/* =========================
+   消息气泡
+========================= */
+
+.karen-message,
+.user-message {
+    max-width: 70%;
+
+    padding: 11px 15px;
+
+    margin: 7px 0;
+
+    border-radius: 15px;
+
+    font-size: 14px;
+
+    line-height: 1.6;
+
+    word-wrap: break-word;
+
+    animation: messageAppear 0.2s ease;
+}
+
+
+/* Karen */
+
+.karen-message {
+    align-self: flex-start;
+
+    background: #f1f0f7;
+
+    color: #41414a;
+
+    border-bottom-left-radius: 5px;
+}
+
+
+/* 用户 */
+
+.user-message {
+    align-self: flex-end;
+
+    background: linear-gradient(
+        135deg,
+        #887bea,
+        #7567d8
+    );
+
+    color: white;
+
+    border-bottom-right-radius: 5px;
+
+    box-shadow:
+        0 4px 12px rgba(117, 103, 216, 0.15);
+}
+
+
+/* =========================
+   输入区域
+========================= */
+
+.input-container {
+    padding: 14px 8% 20px;
+
+    background: white;
+}
+
+
+/* 输入框 */
+
+.input-box {
+    display: flex;
+
+    align-items: center;
+
+    padding: 5px 6px 5px 16px;
+
+    border: 1px solid #e2e2e8;
+
+    border-radius: 16px;
+
+    background: #fafafd;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+.input-box:focus-within {
+    border-color: #b9b2ec;
+
+    box-shadow:
+        0 0 0 3px rgba(124, 110, 230, 0.08);
+
+    background: white;
+}
+
+.input-box input {
+    flex: 1;
+
+    min-width: 0;
+
+    border: none;
+
+    outline: none;
+
+    background: transparent;
+
+    padding: 10px 4px;
+
+    font-size: 14px;
+
+    color: #33343c;
+}
+
+.input-box input::placeholder {
+    color: #aaaab4;
+}
+
+
+/* 发送按钮 */
+
+.send-button {
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+
+    border-radius: 11px;
+
+    background: #8173df;
+
+    color: white;
+
+    font-size: 17px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        transform 0.2s;
+}
+
+.send-button:hover {
+    background: #7163d0;
+
+    transform: translateY(-1px);
+}
+
+.send-button:active {
+    transform: scale(0.95);
+}
+
+
+/* 提示文字 */
+
+.input-hint {
+    margin-top: 7px;
+
+    text-align: center;
+
+    font-size: 10px;
+
+    color: #b0b0b8;
+}
+
+
+/* =========================
+   动画
+========================= */
+
+@keyframes messageAppear {
+
+    from {
+        opacity: 0;
+
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform: translateY(0);
+    }
+
+}
+
+
+/* =========================
+   小屏幕
+========================= */
+
+@media (max-width: 700px) {
+
+    .sidebar {
+        display: none;
+    }
+
+    .chat-header {
+        padding: 0 18px;
+    }
+
+    .chat-messages {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .input-container {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .karen-message,
+    .user-message {
+        max-width: 82%;
+    }
+
+}

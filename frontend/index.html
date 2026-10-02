@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Karen</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- =========================
+             侧边栏
+        ========================== -->
+
+        <aside class="sidebar">
+
+            <div class="brand">
+                <div class="brand-avatar">
+                    K
+                </div>
+
+                <div>
+                    <h1>Karen</h1>
+                    <span>AI Companion</span>
+                </div>
+            </div>
+
+
+            <div class="sidebar-section">
+
+                <button class="new-chat-button">
+                    <span class="plus">+</span>
+                    新的聊天
+                </button>
+
+            </div>
+
+
+            <div class="sidebar-section">
+
+                <div class="section-title">
+                    最近聊天
+                </div>
+
+                <div class="chat-history active">
+                    <span class="history-icon">💬</span>
+                    <span>当前对话</span>
+                </div>
+
+            </div>
+
+
+            <div class="sidebar-bottom">
+
+                <div class="status">
+
+                    <span class="status-dot"></span>
+
+                    <span>
+                        Karen 在线
+                    </span>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+
+        <!-- =========================
+             主聊天区域
+        ========================== -->
+
+        <main class="main">
+
+            <!-- 顶部 -->
+            <header class="chat-header">
+
+                <div class="karen-info">
+
+                    <div class="karen-avatar">
+                        K
+                    </div>
+
+                    <div class="karen-details">
+
+                        <h2>Karen</h2>
+
+                        <span>
+                            <span class="online-dot"></span>
+                            在线
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    class="header-button"
+                    title="更多"
+                >
+                    ⋮
+                </button>
+
+            </header>
+
+
+            <!-- 消息区域 -->
+
+            <div
+                id="chat-messages"
+                class="chat-messages"
+            >
+
+                <!--
+                    JavaScript 会把聊天消息添加到这里
+                -->
+
+            </div>
+
+
+            <!-- 输入区域 -->
+
+            <div class="input-container">
+
+                <div class="input-box">
+
+                    <input
+                        id="message-input"
+                        type="text"
+                        placeholder="和 Karen 说点什么..."
+                        autocomplete="off"
+                    >
+
+                    <button
+                        id="send-button"
+                        class="send-button"
+                    >
+                        <span>➤</span>
+                    </button>
+
+                </div>
+
+                <div class="input-hint">
+                    Enter 发送
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

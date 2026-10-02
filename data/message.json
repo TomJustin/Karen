@@ -1,0 +1,18 @@
+[
+    {
+        "content": "你好呀",
+        "role": "user"
+    },
+    {
+        "content": "你好，Scourage。  \n……嗯，你来了就好。",
+        "role": "assistant"
+    },
+    {
+        "content": "你好吗",
+        "role": "user"
+    },
+    {
+        "content": "还行吧……  \n你问这个干嘛。",
+        "role": "assistant"
+    }
+]
