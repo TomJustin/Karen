@@ -1,4 +1,5 @@
 #include "chat/Conversation.hpp"
+#include <stdexcept>
 
     void Conversation::addMessage(const Message& message){
         messages.push_back(message);
@@ -38,4 +39,30 @@
         }
 
         return newMessages;
+    }
+
+    void Conversation::removeLastMessage()
+    {
+        if (!messages.empty())
+        {
+            messages.pop_back();
+        }
+    }
+
+    
+
+
+    void Conversation::removeMessage(size_t index)
+    {
+        if (index >= messages.size())
+        {
+            throw std::out_of_range("Message index out of range");
+        }
+
+        messages.erase(messages.begin() + index);
+    }
+
+    int Conversation::size()
+    {
+        return messages.size();
     }

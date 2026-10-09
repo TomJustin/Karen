@@ -21,4 +21,10 @@ public:
     void fromJson(const nlohmann::json& data);
 
     std::vector<Message> getRecentMessages(std::size_t count) const;
+
+    void removeLastMessage();
+    
+    void removeMessage(size_t index);
+
+    int size();
 };
