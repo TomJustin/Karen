@@ -2,6 +2,7 @@
 
 #include "model/AIModel.hpp"
 #include "network/HttpClient.hpp"
+#include "model/ModelConfig.hpp"
 
 #include <iostream>
 
@@ -9,7 +10,7 @@ class DeepSeek : public AIModel
 {
     public:
 
-    DeepSeek(const std::string& apiKey, std::size_t contextMessageCount);
+    DeepSeek(const ModelConfig& config, std::size_t contextMessageCount);
 
     std::string chat(
     const Conversation& conversation,
@@ -23,7 +24,7 @@ class DeepSeek : public AIModel
 
     private:
 
-    std::string apiKey;
+    const ModelConfig& config;
 
     HttpClient httpClient;
 

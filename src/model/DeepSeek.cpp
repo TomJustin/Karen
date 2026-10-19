@@ -1,8 +1,8 @@
 #include "model/DeepSeek.hpp"
 #include <iostream>
 
-    DeepSeek::DeepSeek(const std::string& apiKey,
-         std::size_t contextMessageCount) : apiKey(apiKey),
+    DeepSeek::DeepSeek(const ModelConfig& config,
+         std::size_t contextMessageCount) : config(config),
           contextMessageCount(contextMessageCount){
 
           }
@@ -73,7 +73,7 @@
         std::string response = httpClient.post(
             "https://api.deepseek.com/chat/completions",
             body,
-            apiKey
+            config.getApiKey()
         );
 
         nlohmann::json responseJson = nlohmann::json::parse(response);

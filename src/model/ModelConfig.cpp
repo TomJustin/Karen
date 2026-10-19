@@ -29,3 +29,16 @@ std::string ModelConfig::getModelName() const
 {
     return modelName;
 }
+
+bool ModelConfig::updateApiKey(const std::string& newApiKey)
+{
+    if(newApiKey.empty())
+    {
+        return false;
+    }
+
+    apiKey = newApiKey;
+
+    return true;
+
+}

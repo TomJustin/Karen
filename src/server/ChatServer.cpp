@@ -55,6 +55,9 @@ void ChatServer::start()
             )>&& callback
         )
         {
+            const auto originalSize = conversation.size();
+            bool conversationSaved = false;
+
             try
             {
                 /*
@@ -203,7 +206,7 @@ void ChatServer::start()
                 conversationStorage.saveConversation(
                     conversation
                 );
-
+                conversationSaved = true;
 
                 /*
                  * ==============================
@@ -256,6 +259,15 @@ void ChatServer::start()
                  * 异常处理
                  * ==============================
                  */
+                if (!conversationSaved)
+                {
+                    while (conversation.size() > originalSize)
+                    {
+                        conversation.removeMessage(
+                            conversation.size() - 1
+                        );
+                    }
+                }
 
                 Json::Value response;
 

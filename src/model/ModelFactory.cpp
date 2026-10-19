@@ -6,10 +6,10 @@ std::unique_ptr<AIModel> ModelFactory::createModel(
     std::size_t contextMessageCount
 )
 {
-    if (config.getModelName() == "deepseek")
+        if (config.getModelName() == "deepseek")
     {
         return std::make_unique<DeepSeek>(
-            config.getApiKey(),
+            config,
             contextMessageCount
         );
     }
