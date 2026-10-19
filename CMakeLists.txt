@@ -54,6 +54,10 @@ target_link_libraries(
     CURL::libcurl
     nlohmann_json::nlohmann_json
     Drogon::Drogon
+
+    # Windows DPAPI + Local AppData path lookup
+    crypt32
+    shell32
 )
 
 add_custom_command(
@@ -63,7 +67,6 @@ add_custom_command(
             "${PROJECT_SOURCE_DIR}/frontend"
             "$<TARGET_FILE_DIR:Karen>/frontend"
 
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${PROJECT_SOURCE_DIR}/data"
-            "$<TARGET_FILE_DIR:Karen>/data"
+    # Do not copy repository data (profile/chat history/memory) into a new build.
+    # The application creates a default profile on first launch and stores runtime data locally.
 )

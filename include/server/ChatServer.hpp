@@ -2,6 +2,7 @@
 
 #include "chat/Conversation.hpp"
 #include "model/AIModel.hpp"
+#include "model/ModelConfig.hpp"
 #include "user/Profile.hpp"
 #include "storage/ConversationStorage.hpp"
 #include "storage/MemoryStorage.hpp"
@@ -10,12 +11,12 @@
 class ChatServer
 {
 public:
-
     ChatServer(
         Conversation& conversation,
         Profile& profile,
         MemoryStore& memoryStore,
         AIModel& model,
+        ModelConfig& config,
         ConversationStorage& conversationStorage,
         MemoryStorage& memoryStorage,
         MemoryExtractor& extractor
@@ -24,14 +25,13 @@ public:
     void start();
 
 private:
-
     Conversation& conversation;
     Profile& profile;
     MemoryStore& memoryStore;
     AIModel& model;
+    ModelConfig& config;
 
     ConversationStorage& conversationStorage;
     MemoryStorage& memoryStorage;
-
     MemoryExtractor& extractor;
 };

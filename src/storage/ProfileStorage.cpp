@@ -1,5 +1,7 @@
 #include "storage/ProfileStorage.hpp"
 
+#include <filesystem>
+
 bool ProfileStorage::loadProfile(Profile& profile){
     std::ifstream file("data/profile.json");
 
@@ -33,40 +35,39 @@ bool ProfileStorage::loadProfile(Profile& profile){
 
 }
     
-bool ProfileStorage::setupProfile(Profile& profile){
+bool ProfileStorage::setupProfile(Profile& profile)
+{
+    // First launch must not block waiting for console input: Karen is a
+    // desktop application whose first-run setup is handled in the browser.
+    profile.setUserName("用户");
+    profile.setAiName("Karen");
+    profile.setPersonality("温柔");
 
-            std::string userName;
-            std::string aiName;
-            std::string personality;
+    std::error_code error;
+    std::filesystem::create_directories("data", error);
 
-            std::cout << "请输入你的名字：";
-            std::getline(std::cin, userName);
+    if (error)
+    {
+        std::cerr << "无法创建 data 目录" << std::endl;
+        return false;
+    }
 
-            std::cout << "请输入 AI 的名字：";
-            std::getline(std::cin, aiName);
+    std::ofstream saveProfile("data/profile.json");
 
-            std::cout << "请输入 AI 的性格：";
-            std::getline(std::cin, personality);
+    if (!saveProfile)
+    {
+        std::cerr << "无法保存 profile.json" << std::endl;
+        return false;
+    }
 
-            profile.setUserName(userName);
-            profile.setAiName(aiName);
-            profile.setPersonality(personality);
+    saveProfile << profile.toJson().dump(4);
+    saveProfile.close();
 
-            // 保存 Profile
-            std::ofstream saveProfile("data/profile.json");
+    if (!saveProfile)
+    {
+        std::cerr << "写入 profile.json 失败" << std::endl;
+        return false;
+    }
 
-            if (!saveProfile)
-            {
-                std::cout << "无法保存 profile.json"
-                        << std::endl;
-
-                return false;
-            }
-
-            saveProfile << profile.toJson().dump(4);
-
-            std::cout << "Profile 设置完成！"
-                    << std::endl;
-
-            return true;
+    return true;
 }

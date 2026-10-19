@@ -1,5 +1,6 @@
 #include "model/DeepSeek.hpp"
 #include <iostream>
+#include <stdexcept>
 
     DeepSeek::DeepSeek(const ModelConfig& config,
          std::size_t contextMessageCount) : config(config),
@@ -60,7 +61,7 @@
 ){
     nlohmann::json request;
 
-        request["model"] = "deepseek-v4-flash";
+        request["model"] = "deepseek-flash";
 
         for (const auto& message : messages){
         request["messages"].push_back(
@@ -76,23 +77,61 @@
             config.getApiKey()
         );
 
-        nlohmann::json responseJson = nlohmann::json::parse(response);
-
-        if(responseJson.contains("error")){
-            std::cout << responseJson["error"]["message"] << std::endl;
-
-            return "";
+        if (response.empty())
+        {
+            throw std::runtime_error(
+                "没有收到 DeepSeek API 响应，请检查网络或代理设置"
+            );
         }
 
-        if(!responseJson.contains("choices")){
-            std::cout << "There is no choices!" << std::endl;
-            return "";
+        nlohmann::json responseJson;
+
+        try
+        {
+            responseJson = nlohmann::json::parse(response);
+        }
+        catch (const nlohmann::json::parse_error&)
+        {
+            throw std::runtime_error(
+                "DeepSeek API 返回了无法解析的响应"
+            );
         }
 
-        if (responseJson["choices"].empty()){
-            std::cout << "Choices is empty." << std::endl;
-            return "";
+        if (responseJson.contains("error"))
+        {
+            std::string errorMessage = "DeepSeek API 请求失败";
+
+            if (responseJson["error"].is_object() &&
+                responseJson["error"].contains("message") &&
+                responseJson["error"]["message"].is_string())
+            {
+                errorMessage =
+                    responseJson["error"]["message"].get<std::string>();
+            }
+
+            throw std::runtime_error(errorMessage);
         }
 
-        return responseJson["choices"][0]["message"]["content"].get<std::string>();
+        if (!responseJson.contains("choices") ||
+            !responseJson["choices"].is_array() ||
+            responseJson["choices"].empty())
+        {
+            throw std::runtime_error(
+                "DeepSeek API 返回格式异常：缺少有效的 choices"
+            );
+        }
+
+        const auto& firstChoice = responseJson["choices"][0];
+
+        if (!firstChoice.contains("message") ||
+            !firstChoice["message"].is_object() ||
+            !firstChoice["message"].contains("content") ||
+            !firstChoice["message"]["content"].is_string())
+        {
+            throw std::runtime_error(
+                "DeepSeek API 返回格式异常：缺少回复内容"
+            );
+        }
+
+        return firstChoice["message"]["content"].get<std::string>();
 }

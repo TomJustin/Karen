@@ -618,3 +618,203 @@ body {
     }
 
 }
+
+/* =========================
+   API Key 首次配置 / 设置弹窗
+========================= */
+
+.api-key-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+    overflow-y: auto;
+
+    background: rgba(27, 25, 45, 0.42);
+    backdrop-filter: blur(8px);
+}
+
+.api-key-overlay[hidden] {
+    display: none;
+}
+
+.api-key-card {
+    width: min(100%, 460px);
+    padding: 34px;
+
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 22px;
+
+    background: #ffffff;
+    box-shadow: 0 24px 70px rgba(33, 29, 69, 0.2);
+
+    animation: apiKeyDialogAppear 0.2s ease;
+}
+
+.api-key-brand {
+    width: 46px;
+    height: 46px;
+    margin-bottom: 22px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 15px;
+    background: linear-gradient(135deg, #a78bfa, #7c6ee6);
+
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 650;
+}
+
+.api-key-card h2 {
+    margin: 0 0 10px;
+
+    color: #2f3037;
+    font-size: 23px;
+    font-weight: 650;
+}
+
+.api-key-description {
+    margin: 0 0 26px;
+
+    color: #777986;
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+#api-key-form label {
+    display: block;
+    margin-bottom: 8px;
+
+    color: #484957;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#api-key-input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 13px 14px;
+
+    border: 1px solid #dedee8;
+    border-radius: 11px;
+    outline: none;
+
+    background: #fafafd;
+    color: #2f3037;
+    font: inherit;
+    font-size: 14px;
+
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#api-key-input:focus {
+    border-color: #a59ae9;
+    box-shadow: 0 0 0 3px rgba(124, 110, 230, 0.12);
+    background: #ffffff;
+}
+
+.api-key-status {
+    min-height: 21px;
+    margin: 10px 0 12px;
+
+    color: #6e6a91;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.api-key-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.api-key-actions button {
+    min-height: 42px;
+    padding: 0 16px;
+
+    border: 0;
+    border-radius: 11px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.api-key-actions button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+}
+
+.api-key-save {
+    background: #8173df;
+    color: #ffffff;
+}
+
+.api-key-save:hover:not(:disabled) {
+    background: #7163d0;
+    transform: translateY(-1px);
+}
+
+.api-key-cancel {
+    background: #f0f0f5;
+    color: #626371;
+}
+
+.api-key-cancel:hover:not(:disabled) {
+    background: #e5e5ed;
+}
+
+.api-key-note {
+    margin: 20px 0 0;
+
+    color: #a0a1ab;
+    font-size: 11px;
+    line-height: 1.65;
+}
+
+.header-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes apiKeyDialogAppear {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.99);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 520px) {
+    .api-key-overlay {
+        padding: 16px;
+    }
+
+    .api-key-card {
+        padding: 26px 22px;
+        border-radius: 18px;
+    }
+
+    .api-key-card h2 {
+        font-size: 21px;
+    }
+}
