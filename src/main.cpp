@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
 
-#include <windows.h>
+#include "storage/AppDataPaths.hpp"
 
 #include "user/Profile.hpp"
 
@@ -19,6 +19,23 @@
 
 int main()
 {
+    // Make relative runtime resources (including ./frontend) resolve beside
+    // Karen.exe, even when it is started by a shortcut with another CWD.
+    try
+    {
+        std::filesystem::current_path(
+            KarenPaths::getExecutableDirectory()
+        );
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr
+            << "无法定位 Karen 程序目录："
+            << e.what()
+            << std::endl;
+        return 1;
+    }
+
     // =========================
     // Windows UTF-8
     // =========================
