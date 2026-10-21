@@ -64,9 +64,15 @@ jobs:
       - name: Assemble portable package
         shell: pwsh
         run: |
-          $stage = Join-Path $PWD "dist\Karen"
+          $dist = Join-Path $PWD "dist"
+          $stage = Join-Path $dist "Karen"
+          $stageFrontend = Join-Path $stage "frontend"
           $runtime = Join-Path $PWD "build-release\Release"
           $dependencyBin = Join-Path $env:VCPKG_ROOT "installed\x64-windows-static\bin"
+
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          New-Item -ItemType Directory -Force -Path $stageFrontend | Out-Null
 
           if (!(Test-Path (Join-Path $runtime "Karen.exe"))) {
             throw "Karen.exe was not produced by the Release build."
@@ -75,9 +81,11 @@ jobs:
             throw "Frontend files were not copied beside Karen.exe."
           }
 
-          New-Item -ItemType Directory -Force -Path $stage | Out-Null
           Copy-Item (Join-Path $runtime "Karen.exe") $stage -Force
-          Copy-Item (Join-Path $runtime "frontend") $stage -Recurse -Force
+          Copy-Item (Join-Path $runtime "frontend\*") $stageFrontend -Recurse -Force
+          if (!(Test-Path (Join-Path $stageFrontend "index.html"))) {
+            throw "The staged frontend is missing index.html."
+          }
 
           # Static triplet should minimize runtime DLL requirements. Include
           # any DLLs produced by dependencies that choose dynamic linkage.
