@@ -78,10 +78,8 @@ int main()
     if (!config.loadApiKey())
     {
         std::cout
-            << "API NOT FOUND"
+            << "尚未配置 API Key，启动后可在浏览器页面中完成设置。"
             << std::endl;
-
-        return 1;
     }
 
 
@@ -116,6 +114,7 @@ int main()
         profile,
         memoryStore,
         *model,
+        config,
         conversationStorage,
         memoryStorage,
         extractor

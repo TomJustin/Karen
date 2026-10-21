@@ -107,10 +107,12 @@
 
 
                 <button
+                    id="settings-button"
                     class="header-button"
-                    title="更多"
+                    title="配置 API Key"
+                    aria-label="配置 API Key"
                 >
-                    ⋮
+                    ⚙
                 </button>
 
             </header>
@@ -162,6 +164,58 @@
 
     </div>
 
+
+    <!-- API Key 首次配置 / 更换弹窗 -->
+    <div
+        id="api-key-overlay"
+        class="api-key-overlay"
+        hidden
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="api-key-title"
+    >
+        <section class="api-key-card">
+            <div class="api-key-brand">K</div>
+            <h2 id="api-key-title">配置 DeepSeek API Key</h2>
+            <p class="api-key-description">
+                输入你的 DeepSeek API Key。Karen 会先验证密钥，再将它加密保存到当前 Windows 用户的应用配置中。
+            </p>
+
+            <form id="api-key-form">
+                <label for="api-key-input">API Key</label>
+                <input
+                    id="api-key-input"
+                    name="apiKey"
+                    type="password"
+                    autocomplete="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    placeholder="粘贴你的 API Key"
+                    required
+                >
+
+                <p
+                    id="api-key-status"
+                    class="api-key-status"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+
+                <div class="api-key-actions">
+                    <button id="api-key-cancel" class="api-key-cancel" type="button" hidden>
+                        取消
+                    </button>
+                    <button id="api-key-save" class="api-key-save" type="submit">
+                        验证并保存
+                    </button>
+                </div>
+            </form>
+
+            <p class="api-key-note">
+                密钥不会显示在聊天内容中，也不会由本地后端返回给页面。
+            </p>
+        </section>
+    </div>
 
     <script src="script.js"></script>
 

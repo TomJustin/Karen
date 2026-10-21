@@ -1,72 +1,68 @@
 #include "storage/ProfileStorage.hpp"
+#include "storage/AppDataPaths.hpp"
 
-bool ProfileStorage::loadProfile(Profile& profile){
-    std::ifstream file("data/profile.json");
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <string>
 
-    if (file)
+bool ProfileStorage::loadProfile(Profile& profile)
+{
+    std::ifstream file(
+        KarenPaths::getDataFilePathForRead("profile.json"),
+        std::ios::binary
+    );
+
+    if (!file)
     {
-        std::string content(
-            (std::istreambuf_iterator<char>(file)),
-            std::istreambuf_iterator<char>()
-        );
-
-        // 文件存在，但是空的
-        if (content.empty())
-        {
-            return false;
-        }
-        else
-        {
-            nlohmann::json prodata =
-                nlohmann::json::parse(content);
-
-            profile.fromJson(prodata);
-
-            return true;
-        }
-    }
-    else
-    {
-        // 文件不存在
         return false;
     }
 
+    std::string content(
+        (std::istreambuf_iterator<char>(file)),
+        std::istreambuf_iterator<char>()
+    );
+
+    if (content.empty())
+    {
+        return false;
+    }
+
+    const nlohmann::json profileData =
+        nlohmann::json::parse(content);
+
+    profile.fromJson(profileData);
+    return true;
 }
-    
-bool ProfileStorage::setupProfile(Profile& profile){
 
-            std::string userName;
-            std::string aiName;
-            std::string personality;
+bool ProfileStorage::setupProfile(Profile& profile)
+{
+    // First launch must not block waiting for console input: Karen is a
+    // desktop application whose first-run setup is handled in the browser.
+    profile.setUserName("用户");
+    profile.setAiName("Karen");
+    profile.setPersonality("温柔");
 
-            std::cout << "请输入你的名字：";
-            std::getline(std::cin, userName);
+    std::ofstream saveProfile(
+        KarenPaths::getDataFilePath("profile.json"),
+        std::ios::binary | std::ios::trunc
+    );
 
-            std::cout << "请输入 AI 的名字：";
-            std::getline(std::cin, aiName);
+    if (!saveProfile)
+    {
+        std::cerr << "无法保存 profile.json" << std::endl;
+        return false;
+    }
 
-            std::cout << "请输入 AI 的性格：";
-            std::getline(std::cin, personality);
+    saveProfile << profile.toJson().dump(4);
+    saveProfile.close();
 
-            profile.setUserName(userName);
-            profile.setAiName(aiName);
-            profile.setPersonality(personality);
+    if (!saveProfile)
+    {
+        std::cerr << "写入 profile.json 失败" << std::endl;
+        return false;
+    }
 
-            // 保存 Profile
-            std::ofstream saveProfile("data/profile.json");
-
-            if (!saveProfile)
-            {
-                std::cout << "无法保存 profile.json"
-                        << std::endl;
-
-                return false;
-            }
-
-            saveProfile << profile.toJson().dump(4);
-
-            std::cout << "Profile 设置完成！"
-                    << std::endl;
-
-            return true;
+    return true;
 }
