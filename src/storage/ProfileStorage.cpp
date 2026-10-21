@@ -1,40 +1,41 @@
 #include "storage/ProfileStorage.hpp"
+#include "storage/AppDataPaths.hpp"
 
 #include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <string>
 
-bool ProfileStorage::loadProfile(Profile& profile){
-    std::ifstream file("data/profile.json");
+bool ProfileStorage::loadProfile(Profile& profile)
+{
+    std::ifstream file(
+        KarenPaths::getDataFilePathForRead("profile.json"),
+        std::ios::binary
+    );
 
-    if (file)
+    if (!file)
     {
-        std::string content(
-            (std::istreambuf_iterator<char>(file)),
-            std::istreambuf_iterator<char>()
-        );
-
-        // 文件存在，但是空的
-        if (content.empty())
-        {
-            return false;
-        }
-        else
-        {
-            nlohmann::json prodata =
-                nlohmann::json::parse(content);
-
-            profile.fromJson(prodata);
-
-            return true;
-        }
-    }
-    else
-    {
-        // 文件不存在
         return false;
     }
 
+    std::string content(
+        (std::istreambuf_iterator<char>(file)),
+        std::istreambuf_iterator<char>()
+    );
+
+    if (content.empty())
+    {
+        return false;
+    }
+
+    const nlohmann::json profileData =
+        nlohmann::json::parse(content);
+
+    profile.fromJson(profileData);
+    return true;
 }
-    
+
 bool ProfileStorage::setupProfile(Profile& profile)
 {
     // First launch must not block waiting for console input: Karen is a
@@ -43,16 +44,10 @@ bool ProfileStorage::setupProfile(Profile& profile)
     profile.setAiName("Karen");
     profile.setPersonality("温柔");
 
-    std::error_code error;
-    std::filesystem::create_directories("data", error);
-
-    if (error)
-    {
-        std::cerr << "无法创建 data 目录" << std::endl;
-        return false;
-    }
-
-    std::ofstream saveProfile("data/profile.json");
+    std::ofstream saveProfile(
+        KarenPaths::getDataFilePath("profile.json"),
+        std::ios::binary | std::ios::trunc
+    );
 
     if (!saveProfile)
     {

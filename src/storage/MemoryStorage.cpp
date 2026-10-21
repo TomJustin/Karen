@@ -1,27 +1,46 @@
 #include "storage/MemoryStorage.hpp"
+#include "storage/AppDataPaths.hpp"
 
 #include <fstream>
+#include <stdexcept>
 
-    void MemoryStorage::saveMemories(const MemoryStore& memoryStore){
-        std::ofstream file("data/memory.json");
+void MemoryStorage::saveMemories(const MemoryStore& memoryStore)
+{
+    std::ofstream file(
+        KarenPaths::getDataFilePath("memory.json"),
+        std::ios::binary | std::ios::trunc
+    );
 
-        file << memoryStore.toJson().dump(4);
+    if (!file)
+    {
+        throw std::runtime_error("无法打开长期记忆文件进行保存");
     }
 
-    MemoryStore MemoryStorage::loadMemories() const{
-        std::ifstream file("data/memory.json");
+    file << memoryStore.toJson().dump(4);
 
-        MemoryStore memoryStore;
-        
-        if(!file){
-            return memoryStore;
-        }
+    if (!file)
+    {
+        throw std::runtime_error("写入长期记忆失败");
+    }
+}
 
-        nlohmann::json data;
+MemoryStore MemoryStorage::loadMemories() const
+{
+    std::ifstream file(
+        KarenPaths::getDataFilePathForRead("memory.json"),
+        std::ios::binary
+    );
 
-        file >> data;
+    MemoryStore memoryStore;
 
-        memoryStore.fromJson(data);
-
+    if (!file)
+    {
         return memoryStore;
     }
+
+    nlohmann::json data;
+    file >> data;
+
+    memoryStore.fromJson(data);
+    return memoryStore;
+}
