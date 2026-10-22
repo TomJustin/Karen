@@ -453,7 +453,7 @@ void ChatServer::start()
                 Json::Value response;
                 response["success"] = false;
                 response["message"] =
-                    "请填写有效的姓名和性格描述；姓名不能超过 80 个字符，性格描述不能超过 4000 个字符";
+                    "请填写有效的姓名和性格描述，并确保内容没有超出长度限制";
 
                 auto resp =
                     drogon::HttpResponse::newHttpJsonResponse(response);
