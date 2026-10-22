@@ -10,6 +10,10 @@ Local data
 - Encrypted API Key: %LOCALAPPDATA%\Karen\config\api_key.bin
 - Profile, chat history and long-term memory: %LOCALAPPDATA%\Karen\data\
 
+Personalization
+- Click the gear icon in Karen to change your preferred name, the AI's name, and its personality.
+- Changes are saved locally and are used in subsequent conversations.
+
 Your API Key is not bundled in this package. You configure it yourself on first launch.
 The package requires an internet connection to reach the DeepSeek API.
 
