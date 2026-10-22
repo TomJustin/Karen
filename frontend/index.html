@@ -25,12 +25,12 @@
         <aside class="sidebar">
 
             <div class="brand">
-                <div class="brand-avatar">
+                <div class="brand-avatar" id="ai-avatar-brand">
                     K
                 </div>
 
                 <div>
-                    <h1>Karen</h1>
+                    <h1 id="ai-name-brand">Karen</h1>
                     <span>AI Companion</span>
                 </div>
             </div>
@@ -66,7 +66,7 @@
 
                     <span class="status-dot"></span>
 
-                    <span>
+                    <span id="ai-name-status">
                         Karen 在线
                     </span>
 
@@ -88,13 +88,13 @@
 
                 <div class="karen-info">
 
-                    <div class="karen-avatar">
+                    <div class="karen-avatar" id="ai-avatar-header">
                         K
                     </div>
 
                     <div class="karen-details">
 
-                        <h2>Karen</h2>
+                        <h2 id="ai-name-header">Karen</h2>
 
                         <span>
                             <span class="online-dot"></span>
@@ -109,8 +109,8 @@
                 <button
                     id="settings-button"
                     class="header-button"
-                    title="配置 API Key"
-                    aria-label="配置 API Key"
+                    title="个性化设置"
+                    aria-label="个性化设置"
                 >
                     ⚙
                 </button>
@@ -164,6 +164,99 @@
 
     </div>
 
+
+    <!-- 个性化设置弹窗 -->
+    <div
+        id="profile-overlay"
+        class="profile-overlay"
+        hidden
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-title"
+    >
+        <section class="profile-card">
+            <header class="profile-card-header">
+                <div class="profile-heading">
+                    <div class="profile-brand">K</div>
+                    <div>
+                        <h2 id="profile-title">个性化你的 AI</h2>
+                        <p>设置称呼与性格，让后续交流更符合你的习惯。</p>
+                    </div>
+                </div>
+                <button
+                    id="profile-close"
+                    class="profile-close"
+                    type="button"
+                    title="关闭设置"
+                    aria-label="关闭设置"
+                >×</button>
+            </header>
+
+            <form id="profile-form">
+                <div class="profile-fields">
+                    <div class="profile-field">
+                        <label for="profile-user-name">我希望被怎么称呼</label>
+                        <input
+                            id="profile-user-name"
+                            name="userName"
+                            type="text"
+                            maxlength="80"
+                            autocomplete="off"
+                            placeholder="例如：小明"
+                            required
+                        >
+                    </div>
+
+                    <div class="profile-field">
+                        <label for="profile-ai-name">AI 的名字</label>
+                        <input
+                            id="profile-ai-name"
+                            name="aiName"
+                            type="text"
+                            maxlength="80"
+                            autocomplete="off"
+                            placeholder="例如：Karen"
+                            required
+                        >
+                    </div>
+
+                    <div class="profile-field profile-personality-field">
+                        <label for="profile-personality">性格与相处方式</label>
+                        <textarea
+                            id="profile-personality"
+                            name="personality"
+                            rows="6"
+                            maxlength="4000"
+                            placeholder="描述你希望 AI 的性格、说话方式，以及不同场景下的交流风格。"
+                            required
+                        ></textarea>
+                        <div class="profile-field-footer">
+                            <span>可以自由描述，不局限于固定选项。</span>
+                            <span id="profile-personality-count">0 / 4000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="personality-presets">
+                    <span class="presets-label">快速模板</span>
+                    <button type="button" class="personality-preset" data-personality="温柔、耐心，认真倾听用户，给予支持但不过度迎合。">温柔陪伴</button>
+                    <button type="button" class="personality-preset" data-personality="活泼、幽默，表达自然，适当开玩笑，让聊天轻松愉快。">活泼幽默</button>
+                    <button type="button" class="personality-preset" data-personality="理性、严谨，重视逻辑和事实，解释清晰，不夸大确定性。">理性严谨</button>
+                    <button type="button" class="personality-preset" data-personality="像熟悉的朋友一样自然交流，亲切、有主见，也尊重用户的边界。">自然随和</button>
+                </div>
+
+                <p id="profile-status" class="profile-status" role="status" aria-live="polite"></p>
+
+                <div class="profile-actions">
+                    <button id="profile-api-key" class="profile-secondary" type="button">配置 API Key</button>
+                    <div class="profile-actions-right">
+                        <button id="profile-reset" class="profile-secondary" type="button">恢复默认</button>
+                        <button id="profile-save" class="profile-save" type="submit">保存设置</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+    </div>
 
     <!-- API Key 首次配置 / 更换弹窗 -->
     <div
