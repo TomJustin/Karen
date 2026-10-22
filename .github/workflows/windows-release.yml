@@ -40,12 +40,32 @@ jobs:
           & (Join-Path $vcpkgRoot "bootstrap-vcpkg.bat") -disableMetrics
           if ($LASTEXITCODE -ne 0) { throw "vcpkg bootstrap failed." }
 
+          $binaryCache = Join-Path $env:RUNNER_TEMP "vcpkg-binary-cache"
+          $downloads = Join-Path $env:RUNNER_TEMP "vcpkg-downloads"
+          New-Item -ItemType Directory -Force -Path $binaryCache, $downloads | Out-Null
+
           "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VCPKG_DEFAULT_BINARY_CACHE=$binaryCache" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VCPKG_DOWNLOADS=$downloads" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Restore vcpkg caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}\vcpkg-binary-cache
+            ${{ runner.temp }}\vcpkg-downloads
+          key: windows-2022-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-windows-static-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
+          restore-keys: |
+            windows-2022-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-windows-static-
 
       - name: Install C++ dependencies
         shell: pwsh
         run: |
-          & "$env:VCPKG_ROOT\vcpkg.exe" install "drogon:x64-windows-static" "curl:x64-windows-static" "nlohmann-json:x64-windows-static" --clean-after-build
+          $dependencies = Get-Content "packaging\vcpkg-dependencies.txt" |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ -and -not $_.StartsWith("#") }
+
+          & "$env:VCPKG_ROOT\vcpkg.exe" install $dependencies --clean-after-build
           if ($LASTEXITCODE -ne 0) { throw "vcpkg dependency installation failed." }
 
       - name: Configure CMake
