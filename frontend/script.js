@@ -371,7 +371,8 @@ input.addEventListener("keydown", (event) => {
 
 requestProfile()
     .then((profile) => {
-        fillProfileForm(profile);
+        // Keep the visible name in sync without overwriting fields while the
+        // user may already be editing the settings dialog.
         applyProfileToInterface(profile);
     })
     .catch((error) => {
