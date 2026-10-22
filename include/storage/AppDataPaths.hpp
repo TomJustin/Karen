@@ -13,15 +13,29 @@
 #include <windows.h>
 #include <shlobj.h>
 
-// All user data lives outside the installation directory, under:
-// %LOCALAPPDATA%\Karen\data
-//
-// On first read, this helper imports an existing legacy data/<file> from the
-// working directory (or its parent) if the new AppData file does not exist.
-// The legacy file is deliberately left untouched as a recovery copy.
+// Keep application data outside the installation directory and anchor
+// executable-relative resources to the executable, not the caller's CWD.
 namespace KarenPaths
 {
     namespace fs = std::filesystem;
+
+    inline fs::path getExecutableDirectory()
+    {
+        // GetModuleFileNameW handles Unicode Windows paths.
+        std::vector<wchar_t> buffer(32768);
+        const DWORD length = GetModuleFileNameW(
+            nullptr,
+            buffer.data(),
+            static_cast<DWORD>(buffer.size())
+        );
+
+        if (length == 0 || length >= buffer.size())
+        {
+            throw std::runtime_error("无法确定 Karen 程序所在目录");
+        }
+
+        return fs::path(std::wstring(buffer.data(), length)).parent_path();
+    }
 
     inline fs::path getDataDirectory()
     {
@@ -73,19 +87,21 @@ namespace KarenPaths
             return destination;
         }
 
-        // Older builds used a working-directory-relative "data" folder.
-        // Check both the current directory and its parent, covering launches
-        // from either the install folder or a build subdirectory.
-        const fs::path workingDirectory = fs::current_path(error);
-        if (error)
-        {
-            return destination;
-        }
+        // Legacy versions stored data relative to the working directory.
+        // Check the caller's directory, its parent and the executable folder
+        // so existing local data can be migrated after packaging changes.
+        std::vector<fs::path> legacyDirectories;
+        const fs::path executableDirectory = getExecutableDirectory();
+        legacyDirectories.push_back(executableDirectory / L"data");
 
-        const std::vector<fs::path> legacyDirectories = {
-            workingDirectory / L"data",
-            workingDirectory.parent_path() / L"data"
-        };
+        const fs::path workingDirectory = fs::current_path(error);
+        if (!error)
+        {
+            legacyDirectories.push_back(workingDirectory / L"data");
+            legacyDirectories.push_back(
+                workingDirectory.parent_path() / L"data"
+            );
+        }
 
         for (const auto& legacyDirectory : legacyDirectories)
         {
@@ -116,8 +132,8 @@ namespace KarenPaths
                 return destination;
             }
 
-            // If migration cannot copy the old file, still allow the caller
-            // to read it. Future writes always target the AppData directory.
+            // If import fails, allow reading the old file as a fallback.
+            // New writes still target the LocalAppData destination.
             return legacyFile;
         }
 

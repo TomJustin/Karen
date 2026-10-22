@@ -1,0 +1,159 @@
+name: Windows build and release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build portable Windows x64 package
+    runs-on: windows-2022
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Set up pinned vcpkg
+        shell: pwsh
+        run: |
+          $vcpkgRoot = Join-Path $env:RUNNER_TEMP "vcpkg"
+          $vcpkgCommit = "a2f9862da6d88040a8537fb9b8cb24deaa9a196b"
+
+          New-Item -ItemType Directory -Force -Path $vcpkgRoot | Out-Null
+          git -C $vcpkgRoot init
+          git -C $vcpkgRoot remote add origin https://github.com/microsoft/vcpkg.git
+          git -C $vcpkgRoot fetch --depth 1 origin $vcpkgCommit
+          if ($LASTEXITCODE -ne 0) { throw "Unable to fetch pinned vcpkg commit." }
+
+          git -C $vcpkgRoot checkout --detach FETCH_HEAD
+          if ($LASTEXITCODE -ne 0) { throw "Unable to check out pinned vcpkg commit." }
+
+          & (Join-Path $vcpkgRoot "bootstrap-vcpkg.bat") -disableMetrics
+          if ($LASTEXITCODE -ne 0) { throw "vcpkg bootstrap failed." }
+
+          "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install C++ dependencies
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_ROOT\vcpkg.exe" install "drogon:x64-windows-static" "curl:x64-windows-static" "nlohmann-json:x64-windows-static" --clean-after-build
+          if ($LASTEXITCODE -ne 0) { throw "vcpkg dependency installation failed." }
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          $toolchain = Join-Path $env:VCPKG_ROOT "scripts\buildsystems\vcpkg.cmake"
+          $tripletRoot = Join-Path $env:VCPKG_ROOT "installed\x64-windows-static"
+
+          # Drogon's legacy FindJsoncpp/FindBrotli modules can select debug\lib
+          # for multi-config Release builds. Pass the exact release libraries.
+          $jsoncpp = Join-Path $tripletRoot "lib\jsoncpp.lib"
+          $brotliDec = Join-Path $tripletRoot "lib\brotlidec.lib"
+          $brotliEnc = Join-Path $tripletRoot "lib\brotlienc.lib"
+          $brotliCommon = Join-Path $tripletRoot "lib\brotlicommon.lib"
+
+          foreach ($library in @($jsoncpp, $brotliDec, $brotliEnc, $brotliCommon)) {
+            if (!(Test-Path $library)) {
+              throw "Expected Release dependency library was not found: $library"
+            }
+          }
+
+          cmake -S . -B build-release -G "Visual Studio 17 2022" -A x64 `
+            "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
+            "-DVCPKG_TARGET_TRIPLET=x64-windows-static" `
+            "-DJSONCPP_LIBRARIES=$jsoncpp" `
+            "-DBROTLIDEC_LIBRARY=$brotliDec" `
+            "-DBROTLIENC_LIBRARY=$brotliEnc" `
+            "-DBROTLICOMMON_LIBRARY=$brotliCommon"
+
+          if ($LASTEXITCODE -ne 0) { throw "CMake configure failed." }
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          cmake --build build-release --config Release --parallel
+          if ($LASTEXITCODE -ne 0) { throw "Karen Release build failed." }
+
+      - name: Assemble portable package
+        shell: pwsh
+        run: |
+          $dist = Join-Path $PWD "dist"
+          $stage = Join-Path $dist "Karen"
+          $stageFrontend = Join-Path $stage "frontend"
+          $runtime = Join-Path $PWD "build-release\Release"
+          $dependencyBin = Join-Path $env:VCPKG_ROOT "installed\x64-windows-static\bin"
+
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          New-Item -ItemType Directory -Force -Path $stageFrontend | Out-Null
+
+          if (!(Test-Path (Join-Path $runtime "Karen.exe"))) {
+            throw "Karen.exe was not produced by the Release build."
+          }
+          if (!(Test-Path (Join-Path $runtime "frontend\index.html"))) {
+            throw "Frontend files were not copied beside Karen.exe."
+          }
+
+          Copy-Item (Join-Path $runtime "Karen.exe") $stage -Force
+          Copy-Item (Join-Path $runtime "frontend\*") $stageFrontend -Recurse -Force
+          if (!(Test-Path (Join-Path $stageFrontend "index.html"))) {
+            throw "The staged frontend is missing index.html."
+          }
+
+          # Static triplet should minimize runtime DLL requirements. Include
+          # any DLLs produced by dependencies that choose dynamic linkage.
+          if (Test-Path $dependencyBin) {
+            Get-ChildItem $dependencyBin -Filter "*.dll" -File |
+              ForEach-Object { Copy-Item $_.FullName $stage -Force }
+          }
+
+          Copy-Item "packaging\Start-Karen.vbs" $stage -Force
+          Copy-Item "packaging\README.txt" $stage -Force
+
+          $zip = Join-Path $PWD "dist\Karen-windows-x64.zip"
+          Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -CompressionLevel Optimal -Force
+
+          $sha256 = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha256  Karen-windows-x64.zip" | Set-Content (Join-Path $PWD "dist\SHA256SUMS.txt") -Encoding ascii
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: karen-windows-x64
+          path: |
+            dist/Karen-windows-x64.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    steps:
+      - name: Download packaged files
+        uses: actions/download-artifact@v8
+        with:
+          name: karen-windows-x64
+          path: release-assets
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          gh release create $tag "release-assets/Karen-windows-x64.zip" "release-assets/SHA256SUMS.txt" --verify-tag --generate-notes --title "Karen $tag"
+          if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }

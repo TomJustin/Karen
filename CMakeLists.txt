@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
+# Keep the MSVC runtime consistent with vcpkg's x64-windows-static triplet.
+# Set this before project() so CMP0091 can apply the selected runtime library.
+cmake_policy(SET CMP0091 NEW)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 project(Karen)
 
 set(CMAKE_CXX_STANDARD 17)
