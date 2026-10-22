@@ -8,6 +8,8 @@
 #include "storage/MemoryStorage.hpp"
 #include "memory/MemoryExtractor.hpp"
 
+#include <mutex>
+
 class ChatServer
 {
 public:
@@ -34,4 +36,7 @@ private:
     ConversationStorage& conversationStorage;
     MemoryStorage& memoryStorage;
     MemoryExtractor& extractor;
+
+    // Profile settings can be changed while chat requests are being handled.
+    std::mutex profileMutex;
 };
