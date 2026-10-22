@@ -143,6 +143,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      # gh release create needs a checked-out repository to infer the repo
+      # and verify the tag; the build artifact download alone has no .git.
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - name: Download packaged files
         uses: actions/download-artifact@v8
         with:
@@ -153,6 +160,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           $tag = $env:GITHUB_REF_NAME
           gh release create $tag "release-assets/Karen-windows-x64.zip" "release-assets/SHA256SUMS.txt" --verify-tag --generate-notes --title "Karen $tag"
