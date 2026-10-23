@@ -1,5 +1,5 @@
-# Direct vcpkg dependencies for the Windows x64 portable build.
+# Direct vcpkg dependencies for the MinGW-w64 Windows x64 portable build.
 # Keep this list in sync with the packages required by CMakeLists.txt.
-drogon:x64-windows-static
-curl:x64-windows-static
-nlohmann-json:x64-windows-static
+drogon:x64-mingw-dynamic
+curl:x64-mingw-dynamic
+nlohmann-json:x64-mingw-dynamic
