@@ -1,22 +1,46 @@
 cmake_minimum_required(VERSION 3.20)
 
-# Keep the MSVC runtime consistent with vcpkg's x64-windows-static triplet.
-# Set this before project() so CMP0091 can apply the selected runtime library.
+# Keep the MSVC runtime consistent with the release triplet when MSVC is used.
 cmake_policy(SET CMP0091 NEW)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(Karen)
+project(Karen LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 使用 Release 构建
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# Embed the existing HTML/CSS/JS frontend in a native Windows window.
+# webview uses WebView2 on Windows and supports MinGW-w64.
+include(FetchContent)
+
+set(WEBVIEW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WEBVIEW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(WEBVIEW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(WEBVIEW_ENABLE_CHECKS OFF CACHE BOOL "" FORCE)
+set(WEBVIEW_ENABLE_CLANG_FORMAT OFF CACHE BOOL "" FORCE)
+set(WEBVIEW_ENABLE_CLANG_TIDY OFF CACHE BOOL "" FORCE)
+set(WEBVIEW_INSTALL_DOCS OFF CACHE BOOL "" FORCE)
+set(WEBVIEW_INSTALL_TARGETS OFF CACHE BOOL "" FORCE)
+
+if(MINGW)
+    set(WEBVIEW_USE_COMPAT_MINGW ON CACHE BOOL "" FORCE)
+endif()
+
+FetchContent_Declare(
+    webview
+    GIT_REPOSITORY https://github.com/webview/webview.git
+    GIT_TAG 0.12.0
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(webview)
+
 add_executable(
     Karen
+    WIN32
 
     src/main.cpp
 
@@ -59,10 +83,19 @@ target_link_libraries(
     CURL::libcurl
     nlohmann_json::nlohmann_json
     Drogon::Drogon
+    webview::core
 
-    # Windows DPAPI + Local AppData path lookup
-    crypt32
+    # WebView2 / native Windows window / local HTTP readiness probe.
+    advapi32
+    ole32
     shell32
+    shlwapi
+    user32
+    version
+    winhttp
+
+    # Windows DPAPI + Local AppData path lookup.
+    crypt32
 )
 
 add_custom_command(
@@ -73,5 +106,5 @@ add_custom_command(
             "$<TARGET_FILE_DIR:Karen>/frontend"
 
     # Do not copy repository data (profile/chat history/memory) into a new build.
-    # The application creates a default profile on first launch and stores runtime data locally.
+    # Runtime data remains under the current Windows user's Local AppData.
 )
