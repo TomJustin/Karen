@@ -136,7 +136,6 @@ jobs:
               ForEach-Object { Copy-Item $_.FullName $stage -Force }
           }
 
-          Copy-Item "packaging\Start-Karen.vbs" $stage -Force
           Copy-Item "packaging\README.txt" $stage -Force
 
           $zip = Join-Path $PWD "dist\Karen-windows-x64.zip"
