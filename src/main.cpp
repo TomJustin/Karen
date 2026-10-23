@@ -6,6 +6,9 @@
 #include <shellapi.h>
 
 #include <webview/webview.h>
+#include <drogon/drogon.h>
+
+#include <stdexcept>
 
 #include <atomic>
 #include <chrono>
