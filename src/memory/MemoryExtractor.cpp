@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 
 MemoryExtractor::MemoryExtractor(AIModel& model)
     : model(model)
