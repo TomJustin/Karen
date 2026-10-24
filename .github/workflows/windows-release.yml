@@ -114,6 +114,8 @@ jobs:
             windows-2022-msys2-ucrt64-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-mingw-dynamic-
 
       - name: Install C++ dependencies
+        # Skip vcpkg entirely when the exact installed-package cache is restored.
+        if: steps.vcpkg-installed.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $dependencies = Get-Content "packaging\vcpkg-dependencies.txt" |
