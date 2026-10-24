@@ -9,6 +9,7 @@
 #include <cctype>
 #include <iostream>
 #include <string>
+#include <vector>
 
 using json = nlohmann::json;
 
@@ -560,8 +561,7 @@ void ChatServer::start()
                         "请求必须是 JSON";
 
                     auto resp =
-                        drogon::HttpResponse::
-                        newHttpJsonResponse(response);
+                        drogon::HttpResponse::newHttpJsonResponse(response);
 
                     resp->setStatusCode(
                         drogon::k400BadRequest
@@ -588,8 +588,7 @@ void ChatServer::start()
                         "缺少 message 字段";
 
                     auto resp =
-                        drogon::HttpResponse::
-                        newHttpJsonResponse(response);
+                        drogon::HttpResponse::newHttpJsonResponse(response);
 
                     resp->setStatusCode(
                         drogon::k400BadRequest
@@ -619,8 +618,7 @@ void ChatServer::start()
                         "消息不能为空";
 
                     auto resp =
-                        drogon::HttpResponse::
-                        newHttpJsonResponse(response);
+                        drogon::HttpResponse::newHttpJsonResponse(response);
 
                     resp->setStatusCode(
                         drogon::k400BadRequest
@@ -698,28 +696,60 @@ void ChatServer::start()
 
                 /*
                  * ==============================
-                 * 7. 提取 Memory
+                 * 7. 提取并整理长期记忆
                  * ==============================
+                 *
+                 * Memory extraction is best-effort and runs after the chat
+                 * has been saved. A memory-provider or disk error must not
+                 * turn a successful answer into a failed chat response.
                  */
 
-                MemoryCandidate candidate =
-                    extractor.extract(input);
-
-                if (candidate.shouldRemember)
+                try
                 {
-                    Memory memory;
+                    const MemoryCandidate candidate =
+                        extractor.extract(
+                            input,
+                            memoryStore.getMemories()
+                        );
 
-                    memory.category =
-                        candidate.category;
+                    if (candidate.shouldRemember)
+                    {
+                        Memory memory;
+                        memory.category = candidate.category;
+                        memory.content = candidate.content;
 
-                    memory.content =
-                        candidate.content;
+                        bool memoryChanged = false;
 
-                    memoryStore.addMemory(memory);
+                        if (candidate.targetIndices.empty())
+                        {
+                            memoryChanged = memoryStore.addMemory(memory);
+                        }
+                        else
+                        {
+                            std::vector<std::size_t> duplicateIndices(
+                                candidate.targetIndices.begin() + 1,
+                                candidate.targetIndices.end()
+                            );
 
-                    memoryStorage.saveMemories(
-                        memoryStore
-                    );
+                            memoryChanged = memoryStore.updateMemory(
+                                candidate.targetIndices.front(),
+                                memory,
+                                duplicateIndices
+                            );
+                        }
+
+                        if (memoryChanged)
+                        {
+                            memoryStorage.saveMemories(memoryStore);
+                        }
+                    }
+                }
+                catch (const std::exception& memoryError)
+                {
+                    std::cerr
+                        << "长期记忆处理失败，本次聊天仍正常返回："
+                        << memoryError.what()
+                        << std::endl;
                 }
 
 
@@ -735,8 +765,7 @@ void ChatServer::start()
                 response["message"] = answer;
 
                 auto resp =
-                    drogon::HttpResponse::
-                    newHttpJsonResponse(response);
+                    drogon::HttpResponse::newHttpJsonResponse(response);
 
                 callback(resp);
             }
@@ -763,8 +792,7 @@ void ChatServer::start()
                 response["message"] = e.what();
 
                 auto resp =
-                    drogon::HttpResponse::
-                    newHttpJsonResponse(response);
+                    drogon::HttpResponse::newHttpJsonResponse(response);
 
                 resp->setStatusCode(
                     drogon::k500InternalServerError
