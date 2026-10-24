@@ -12,10 +12,18 @@ namespace
         std::string normalized;
         normalized.reserve(value.size());
 
+        bool previousWasWhitespace = true;
+
         for (unsigned char ch : value)
         {
             if (std::isspace(ch) != 0)
             {
+                if (!normalized.empty() && !previousWasWhitespace)
+                {
+                    normalized.push_back(' ');
+                    previousWasWhitespace = true;
+                }
+
                 continue;
             }
 
@@ -29,6 +37,13 @@ namespace
             {
                 normalized.push_back(static_cast<char>(ch));
             }
+
+            previousWasWhitespace = false;
+        }
+
+        if (!normalized.empty() && normalized.back() == ' ')
+        {
+            normalized.pop_back();
         }
 
         // Ignore only trailing sentence punctuation. Keep internal punctuation
@@ -76,7 +91,9 @@ bool MemoryStore::addMemory(const Memory& memory)
 
     for (const auto& existing : store)
     {
-        if (normalizeMemoryContent(existing.content) == newKey)
+        // Same text under a different category can represent a distinct fact.
+        if (existing.category == memory.category &&
+            normalizeMemoryContent(existing.content) == newKey)
         {
             return false;
         }
@@ -139,11 +156,12 @@ bool MemoryStore::updateMemory(
     }
 
     // A model update can also become text-identical to another record.
-    // Collapse those exact duplicates deterministically as a final safeguard.
+    // Collapse those exact duplicates deterministically within the same category.
     const std::string newKey = normalizeMemoryContent(memory.content);
     for (std::size_t current = store.size(); current-- > 0;)
     {
         if (current == keptIndex ||
+            store[current].category != memory.category ||
             normalizeMemoryContent(store[current].content) != newKey)
         {
             continue;
