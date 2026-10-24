@@ -39,4 +39,6 @@ private:
 
     // Profile settings can be changed while chat requests are being handled.
     std::mutex profileMutex;
+    // Serialize chat and reset operations that mutate shared state.
+    std::mutex stateMutex;
 };

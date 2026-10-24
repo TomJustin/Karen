@@ -510,6 +510,67 @@ void ChatServer::start()
 
     /*
      * ==============================
+     * Clear long-term memory and the current conversation
+     * ==============================
+     */
+    drogon::app().registerHandler(
+        "/api/memory/reset",
+        [this](
+            const drogon::HttpRequestPtr& req,
+            std::function<void(const drogon::HttpResponsePtr&)>&& callback
+        )
+        {
+            const std::string origin = req->getHeader("origin");
+            if (!origin.empty() && origin != "http://127.0.0.1:8080" &&
+                origin != "http://localhost:8080")
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] = "请求来源不被允许";
+                auto resp = drogon::HttpResponse::newHttpJsonResponse(response);
+                resp->setStatusCode(drogon::k403Forbidden);
+                callback(resp);
+                return;
+            }
+
+            std::lock_guard<std::mutex> stateLock(stateMutex);
+            try
+            {
+                MemoryStore emptyMemoryStore;
+                Conversation emptyConversation;
+                memoryStorage.saveMemories(emptyMemoryStore);
+                conversationStorage.saveConversation(emptyConversation);
+                memoryStore.clear();
+                while (conversation.size() > 0)
+                {
+                    conversation.removeMessage(
+                        static_cast<std::size_t>(conversation.size() - 1)
+                    );
+                }
+
+                Json::Value response;
+                response["success"] = true;
+                response["message"] = "长期记忆与当前对话已清空";
+                auto resp = drogon::HttpResponse::newHttpJsonResponse(response);
+                resp->addHeader("Cache-Control", "no-store");
+                callback(resp);
+            }
+            catch (const std::exception& error)
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] = std::string("清空失败：") + error.what();
+                auto resp = drogon::HttpResponse::newHttpJsonResponse(response);
+                resp->setStatusCode(drogon::k500InternalServerError);
+                callback(resp);
+            }
+        },
+        {drogon::Post}
+    );
+
+
+    /*
+     * ==============================
      * 5. POST /api/chat
      * ==============================
      */
@@ -524,6 +585,7 @@ void ChatServer::start()
             )>&& callback
         )
         {
+            std::lock_guard<std::mutex> stateLock(stateMutex);
             if (!config.hasApiKey())
             {
                 Json::Value response;

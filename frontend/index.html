@@ -36,30 +36,6 @@
             </div>
 
 
-            <div class="sidebar-section">
-
-                <button class="new-chat-button">
-                    <span class="plus">+</span>
-                    新的聊天
-                </button>
-
-            </div>
-
-
-            <div class="sidebar-section">
-
-                <div class="section-title">
-                    最近聊天
-                </div>
-
-                <div class="chat-history active">
-                    <span class="history-icon">💬</span>
-                    <span>当前对话</span>
-                </div>
-
-            </div>
-
-
             <div class="sidebar-bottom">
 
                 <div class="status">
@@ -244,6 +220,14 @@
                     <button type="button" class="personality-preset" data-personality="理性、严谨，重视逻辑和事实，解释清晰，不夸大确定性。">理性严谨</button>
                     <button type="button" class="personality-preset" data-personality="像熟悉的朋友一样自然交流，亲切、有主见，也尊重用户的边界。">自然随和</button>
                 </div>
+
+                <section class="profile-danger-section" aria-labelledby="profile-danger-title">
+                    <div class="profile-danger-copy">
+                        <h3 id="profile-danger-title">重新开始</h3>
+                        <p>清空 Karen 保存的长期记忆和当前对话记录。此操作不可撤销，不会更改个性化设置或 API Key。</p>
+                    </div>
+                    <button id="clear-memory-button" class="profile-danger-button" type="button">清空记忆与对话</button>
+                </section>
 
                 <p id="profile-status" class="profile-status" role="status" aria-live="polite"></p>
 

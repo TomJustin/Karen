@@ -22,6 +22,7 @@ const profileSaveButton = document.getElementById("profile-save");
 const profileResetButton = document.getElementById("profile-reset");
 const profileCloseButton = document.getElementById("profile-close");
 const profileApiKeyButton = document.getElementById("profile-api-key");
+const clearMemoryButton = document.getElementById("clear-memory-button");
 
 const apiKeyOverlay = document.getElementById("api-key-overlay");
 const apiKeyForm = document.getElementById("api-key-form");
@@ -265,10 +266,40 @@ async function saveProfile(event) {
     }
 }
 
+async function clearMemoryAndConversation() {
+    const confirmed = window.confirm(
+        "确定要清空 Karen 的长期记忆和当前对话吗？此操作不可撤销。你的个性化设置和 API Key 不会被删除。"
+    );
+    if (!confirmed) return;
+
+    clearMemoryButton.disabled = true;
+    sendButton.disabled = true;
+    setProfileStatus("正在清空记忆与对话…");
+    try {
+        const response = await fetch("/api/memory/reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "清空记忆失败");
+        }
+        chatMessages.replaceChildren();
+        input.value = "";
+        setProfileStatus("已清空长期记忆与当前对话，可以重新开始。");
+    } catch (error) {
+        setProfileStatus(error.message || "清空失败，请确认 Karen 正在运行后重试。", true);
+    } finally {
+        clearMemoryButton.disabled = false;
+        sendButton.disabled = false;
+    }
+}
+
 async function sendMessage() {
     const message = input.value.trim();
 
-    if (!message || !hasApiKey) return;
+    if (!message || !hasApiKey || sendButton.disabled) return;
 
     const userMessage = document.createElement("p");
     userMessage.classList.add("user-message");
@@ -350,6 +381,7 @@ apiKeyForm.addEventListener("submit", saveApiKey);
 apiKeyCancelButton.addEventListener("click", closeApiKeyDialog);
 
 settingsButton.addEventListener("click", openProfileDialog);
+clearMemoryButton.addEventListener("click", clearMemoryAndConversation);
 
 apiKeyOverlay.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
