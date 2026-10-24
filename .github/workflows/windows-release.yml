@@ -11,7 +11,8 @@ on:
       - main
   workflow_dispatch:
 
-# Avoid two runs for the same PR saving the same vcpkg cache simultaneously.
+# Cancel stale builds when a newer commit arrives. Expensive dependency caches
+# are explicitly saved after installation, before compiling the application.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -32,7 +33,11 @@ jobs:
         id: msys2
         with:
           msystem: UCRT64
-          update: true
+          # Reuse the MSYS2 installation on the GitHub-hosted Windows image.
+          # Avoid a full rolling update on every source-only change.
+          release: false
+          update: false
+          cache: true
           install: >-
             mingw-w64-ucrt-x86_64-toolchain
             mingw-w64-ucrt-x86_64-cmake
@@ -49,6 +54,16 @@ jobs:
             }
           }
           $mingwBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Fingerprint MinGW compiler
+        id: toolchain
+        shell: pwsh
+        run: |
+          $msys2Root = "${{ steps.msys2.outputs.msys2-location }}"
+          $mingwBin = Join-Path $msys2Root "ucrt64\bin"
+          $gccHash = (Get-FileHash (Join-Path $mingwBin "gcc.exe") -Algorithm SHA256).Hash.Substring(0, 16).ToLowerInvariant()
+          $gxxHash = (Get-FileHash (Join-Path $mingwBin "g++.exe") -Algorithm SHA256).Hash.Substring(0, 16).ToLowerInvariant()
+          "fingerprint=$gccHash-$gxxHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Set up pinned vcpkg
         shell: pwsh
@@ -77,8 +92,19 @@ jobs:
           "VCPKG_DOWNLOADS=$downloads" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "VCPKG_DEFAULT_HOST_TRIPLET=x64-windows" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Restore vcpkg caches
-        uses: actions/cache@v6
+      # The ABI/toolchain fingerprint prevents stale installed libraries from
+      # being reused after the compiler changes. The binary archive cache below
+      # remains available as a fallback when this exact cache misses.
+      - name: Restore installed vcpkg packages
+        id: vcpkg-installed
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}\vcpkg\installed
+          key: windows-2022-vcpkg-installed-a2f9862d-${{ steps.toolchain.outputs.fingerprint }}-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
+
+      - name: Restore vcpkg binary and source caches
+        id: vcpkg-archives
+        uses: actions/cache/restore@v6
         with:
           path: |
             ${{ runner.temp }}\vcpkg-binary-cache
@@ -97,6 +123,33 @@ jobs:
           & "$env:VCPKG_ROOT\vcpkg.exe" install $dependencies --clean-after-build
           if ($LASTEXITCODE -ne 0) { throw "vcpkg dependency installation failed." }
 
+      # Save dependency caches as soon as installation succeeds. A later
+      # source compile failure should not waste this expensive dependency build.
+      - name: Save installed vcpkg packages
+        if: success()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}\vcpkg\installed
+          key: windows-2022-vcpkg-installed-a2f9862d-${{ steps.toolchain.outputs.fingerprint }}-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
+
+      - name: Save vcpkg binary and source caches
+        if: success()
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ${{ runner.temp }}\vcpkg-binary-cache
+            ${{ runner.temp }}\vcpkg-downloads
+          key: windows-2022-msys2-ucrt64-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
+
+      # webview 0.12.0 fetches both its source and the pinned WebView2 NuGet
+      # package through FetchContent. Keep this outside the throwaway build dir.
+      - name: Restore CMake FetchContent cache
+        id: fetchcontent-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}\cmake-fetchcontent
+          key: windows-2022-fetchcontent-webview-0.12.0-${{ hashFiles('CMakeLists.txt') }}
+
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -107,6 +160,7 @@ jobs:
           $ninja = Join-Path $mingwBin "ninja.exe"
           $gcc = Join-Path $mingwBin "gcc.exe"
           $gxx = Join-Path $mingwBin "g++.exe"
+          $fetchContentBase = Join-Path $env:RUNNER_TEMP "cmake-fetchcontent"
 
           $cmakeArgs = @(
             "-S", ".", "-B", "build-release", "-G", "Ninja",
@@ -116,11 +170,20 @@ jobs:
             "-DCMAKE_TOOLCHAIN_FILE=$toolchain",
             "-DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic",
             "-DVCPKG_HOST_TRIPLET=x64-windows",
+            "-DFETCHCONTENT_BASE_DIR=$fetchContentBase",
+            "-DFETCHCONTENT_UPDATES_DISCONNECTED=ON",
             "-DCMAKE_BUILD_TYPE=Release"
           )
 
           & $cmake @cmakeArgs
           if ($LASTEXITCODE -ne 0) { throw "CMake configure failed." }
+
+      - name: Save CMake FetchContent cache
+        if: success()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}\cmake-fetchcontent
+          key: windows-2022-fetchcontent-webview-0.12.0-${{ hashFiles('CMakeLists.txt') }}
 
       - name: Build Release
         shell: pwsh
