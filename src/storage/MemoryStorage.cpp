@@ -4,7 +4,7 @@
 #include <fstream>
 #include <stdexcept>
 
-void MemoryStorage::saveMemories(const MemoryStore& memoryStore)
+void MemoryStorage::saveMemories(const MemoryStore& memoryStore) const
 {
     std::ofstream file(
         KarenPaths::getDataFilePath("memory.json"),
