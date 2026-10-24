@@ -42,5 +42,14 @@ MemoryStore MemoryStorage::loadMemories() const
     file >> data;
 
     memoryStore.fromJson(data);
+
+    // fromJson removes exact duplicates and malformed entries. Persist the
+    // cleaned result immediately so legacy duplicates do not remain on disk
+    // until some unrelated future memory change.
+    if (data.is_array() && memoryStore.size() != data.size())
+    {
+        saveMemories(memoryStore);
+    }
+
     return memoryStore;
 }
