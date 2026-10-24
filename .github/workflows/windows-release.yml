@@ -47,7 +47,7 @@ jobs:
         shell: pwsh
         run: |
           $msys2Root = "${{ steps.msys2.outputs.msys2-location }}"
-          $mingwBin = Join-Path $msys2Root "ucrt64\\bin"
+          $mingwBin = Join-Path $msys2Root "ucrt64\bin"
           foreach ($tool in @("g++.exe", "gcc.exe", "cmake.exe", "ninja.exe")) {
             if (!(Test-Path (Join-Path $mingwBin $tool))) {
               throw "Required MinGW tool is missing: $tool"
@@ -60,7 +60,7 @@ jobs:
         shell: pwsh
         run: |
           $msys2Root = "${{ steps.msys2.outputs.msys2-location }}"
-          $mingwBin = Join-Path $msys2Root "ucrt64\\bin"
+          $mingwBin = Join-Path $msys2Root "ucrt64\bin"
           $gccHash = (Get-FileHash (Join-Path $mingwBin "gcc.exe") -Algorithm SHA256).Hash.Substring(0, 16).ToLowerInvariant()
           $gxxHash = (Get-FileHash (Join-Path $mingwBin "g++.exe") -Algorithm SHA256).Hash.Substring(0, 16).ToLowerInvariant()
           "fingerprint=$gccHash-$gxxHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
@@ -99,7 +99,7 @@ jobs:
         id: vcpkg-installed
         uses: actions/cache@v6
         with:
-          path: ${{ runner.temp }}\\vcpkg\\installed
+          path: ${{ runner.temp }}\vcpkg\installed
           key: windows-2022-vcpkg-installed-a2f9862d-${{ steps.toolchain.outputs.fingerprint }}-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
 
       - name: Restore vcpkg binary and source caches
@@ -107,8 +107,8 @@ jobs:
         uses: actions/cache@v6
         with:
           path: |
-            ${{ runner.temp }}\\vcpkg-binary-cache
-            ${{ runner.temp }}\\vcpkg-downloads
+            ${{ runner.temp }}\vcpkg-binary-cache
+            ${{ runner.temp }}\vcpkg-downloads
           key: windows-2022-msys2-ucrt64-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
           restore-keys: |
             windows-2022-msys2-ucrt64-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-mingw-dynamic-
@@ -116,11 +116,11 @@ jobs:
       - name: Install C++ dependencies
         shell: pwsh
         run: |
-          $dependencies = Get-Content "packaging\\vcpkg-dependencies.txt" |
+          $dependencies = Get-Content "packaging\vcpkg-dependencies.txt" |
             ForEach-Object { $_.Trim() } |
             Where-Object { $_ -and -not $_.StartsWith("#") }
 
-          & "$env:VCPKG_ROOT\\vcpkg.exe" install $dependencies --clean-after-build
+          & "$env:VCPKG_ROOT\vcpkg.exe" install $dependencies --clean-after-build
           if ($LASTEXITCODE -ne 0) { throw "vcpkg dependency installation failed." }
 
       # webview 0.12.0 fetches both its source and the pinned WebView2 NuGet
@@ -129,15 +129,15 @@ jobs:
         id: fetchcontent-cache
         uses: actions/cache@v6
         with:
-          path: ${{ runner.temp }}\\cmake-fetchcontent
+          path: ${{ runner.temp }}\cmake-fetchcontent
           key: windows-2022-fetchcontent-webview-0.12.0-${{ hashFiles('CMakeLists.txt') }}
 
       - name: Configure CMake
         shell: pwsh
         run: |
           $msys2Root = "${{ steps.msys2.outputs.msys2-location }}"
-          $mingwBin = Join-Path $msys2Root "ucrt64\\bin"
-          $toolchain = Join-Path $env:VCPKG_ROOT "scripts\\buildsystems\\vcpkg.cmake"
+          $mingwBin = Join-Path $msys2Root "ucrt64\bin"
+          $toolchain = Join-Path $env:VCPKG_ROOT "scripts\buildsystems\vcpkg.cmake"
           $cmake = Join-Path $mingwBin "cmake.exe"
           $ninja = Join-Path $mingwBin "ninja.exe"
           $gcc = Join-Path $mingwBin "gcc.exe"
@@ -163,7 +163,7 @@ jobs:
       - name: Build Release
         shell: pwsh
         run: |
-          $cmake = Join-Path "${{ steps.msys2.outputs.msys2-location }}" "ucrt64\\bin\\cmake.exe"
+          $cmake = Join-Path "${{ steps.msys2.outputs.msys2-location }}" "ucrt64\bin\cmake.exe"
           & $cmake --build build-release --parallel
           if ($LASTEXITCODE -ne 0) { throw "Karen MinGW Release build failed." }
 
@@ -174,8 +174,8 @@ jobs:
           $stage = Join-Path $dist "Karen"
           $stageFrontend = Join-Path $stage "frontend"
           $runtime = Join-Path $PWD "build-release"
-          $dependencyBin = Join-Path $env:VCPKG_ROOT "installed\\x64-mingw-dynamic\\bin"
-          $mingwBin = Join-Path "${{ steps.msys2.outputs.msys2-location }}" "ucrt64\\bin"
+          $dependencyBin = Join-Path $env:VCPKG_ROOT "installed\x64-mingw-dynamic\bin"
+          $mingwBin = Join-Path "${{ steps.msys2.outputs.msys2-location }}" "ucrt64\bin"
 
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
@@ -184,12 +184,12 @@ jobs:
           if (!(Test-Path (Join-Path $runtime "Karen.exe"))) {
             throw "Karen.exe was not produced by the MinGW Release build."
           }
-          if (!(Test-Path (Join-Path $runtime "frontend\\index.html"))) {
+          if (!(Test-Path (Join-Path $runtime "frontend\index.html"))) {
             throw "Frontend files were not copied beside Karen.exe."
           }
 
           Copy-Item (Join-Path $runtime "Karen.exe") $stage -Force
-          Copy-Item (Join-Path $runtime "frontend\\*") $stageFrontend -Recurse -Force
+          Copy-Item (Join-Path $runtime "frontend\*") $stageFrontend -Recurse -Force
           if (!(Test-Path (Join-Path $stageFrontend "index.html"))) {
             throw "The staged frontend is missing index.html."
           }
@@ -208,13 +208,13 @@ jobs:
             }
           }
 
-          Copy-Item "packaging\\README.txt" $stage -Force
+          Copy-Item "packaging\README.txt" $stage -Force
 
-          $zip = Join-Path $PWD "dist\\Karen-windows-x64.zip"
+          $zip = Join-Path $PWD "dist\Karen-windows-x64.zip"
           Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -CompressionLevel Optimal -Force
 
           $sha256 = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$sha256  Karen-windows-x64.zip" | Set-Content (Join-Path $PWD "dist\\SHA256SUMS.txt") -Encoding ascii
+          "$sha256  Karen-windows-x64.zip" | Set-Content (Join-Path $PWD "dist\SHA256SUMS.txt") -Encoding ascii
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
