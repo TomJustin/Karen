@@ -11,11 +11,11 @@ on:
       - main
   workflow_dispatch:
 
-# Let an in-progress run finish so it can populate caches. Newer pending runs
-# replace older pending runs in this group, avoiding a long queue of stale commits.
+# Cancel stale builds when a newer commit arrives. Expensive dependency caches
+# are explicitly saved after installation, before compiling the application.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
