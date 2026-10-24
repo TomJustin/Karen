@@ -97,14 +97,14 @@ jobs:
       # remains available as a fallback when this exact cache misses.
       - name: Restore installed vcpkg packages
         id: vcpkg-installed
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}\vcpkg\installed
           key: windows-2022-vcpkg-installed-a2f9862d-${{ steps.toolchain.outputs.fingerprint }}-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
 
       - name: Restore vcpkg binary and source caches
         id: vcpkg-archives
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: |
             ${{ runner.temp }}\vcpkg-binary-cache
@@ -123,11 +123,29 @@ jobs:
           & "$env:VCPKG_ROOT\vcpkg.exe" install $dependencies --clean-after-build
           if ($LASTEXITCODE -ne 0) { throw "vcpkg dependency installation failed." }
 
+      # Save dependency caches as soon as installation succeeds. A later
+      # source compile failure should not waste this expensive dependency build.
+      - name: Save installed vcpkg packages
+        if: success()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}\vcpkg\installed
+          key: windows-2022-vcpkg-installed-a2f9862d-${{ steps.toolchain.outputs.fingerprint }}-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
+
+      - name: Save vcpkg binary and source caches
+        if: success()
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ${{ runner.temp }}\vcpkg-binary-cache
+            ${{ runner.temp }}\vcpkg-downloads
+          key: windows-2022-msys2-ucrt64-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
+
       # webview 0.12.0 fetches both its source and the pinned WebView2 NuGet
       # package through FetchContent. Keep this outside the throwaway build dir.
       - name: Restore CMake FetchContent cache
         id: fetchcontent-cache
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}\cmake-fetchcontent
           key: windows-2022-fetchcontent-webview-0.12.0-${{ hashFiles('CMakeLists.txt') }}
@@ -159,6 +177,13 @@ jobs:
 
           & $cmake @cmakeArgs
           if ($LASTEXITCODE -ne 0) { throw "CMake configure failed." }
+
+      - name: Save CMake FetchContent cache
+        if: success()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}\cmake-fetchcontent
+          key: windows-2022-fetchcontent-webview-0.12.0-${{ hashFiles('CMakeLists.txt') }}
 
       - name: Build Release
         shell: pwsh
