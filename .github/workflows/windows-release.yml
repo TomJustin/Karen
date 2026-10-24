@@ -11,16 +11,44 @@ on:
       - main
   workflow_dispatch:
 
+# Avoid two runs for the same PR saving the same vcpkg cache simultaneously.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Build portable Windows x64 package
+    name: Build MinGW-w64 Windows x64 desktop package
     runs-on: windows-2022
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
+
+      - name: Set up MinGW-w64
+        uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Add MinGW-w64 tools to PATH
+        shell: pwsh
+        run: |
+          $msys2Root = "${{ steps.msys2.outputs.msys2-location }}"
+          $mingwBin = Join-Path $msys2Root "ucrt64\bin"
+          foreach ($tool in @("g++.exe", "gcc.exe", "cmake.exe", "ninja.exe")) {
+            if (!(Test-Path (Join-Path $mingwBin $tool))) {
+              throw "Required MinGW tool is missing: $tool"
+            }
+          }
+          $mingwBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Set up pinned vcpkg
         shell: pwsh
@@ -40,48 +68,66 @@ jobs:
           & (Join-Path $vcpkgRoot "bootstrap-vcpkg.bat") -disableMetrics
           if ($LASTEXITCODE -ne 0) { throw "vcpkg bootstrap failed." }
 
+          $binaryCache = Join-Path $env:RUNNER_TEMP "vcpkg-binary-cache"
+          $downloads = Join-Path $env:RUNNER_TEMP "vcpkg-downloads"
+          New-Item -ItemType Directory -Force -Path $binaryCache, $downloads | Out-Null
+
           "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VCPKG_DEFAULT_BINARY_CACHE=$binaryCache" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VCPKG_DOWNLOADS=$downloads" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "VCPKG_DEFAULT_HOST_TRIPLET=x64-windows" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Restore vcpkg caches
+        uses: actions/cache@v6
+        with:
+          path: |
+            ${{ runner.temp }}\vcpkg-binary-cache
+            ${{ runner.temp }}\vcpkg-downloads
+          key: windows-2022-msys2-ucrt64-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-mingw-dynamic-${{ hashFiles('packaging/vcpkg-dependencies.txt') }}
+          restore-keys: |
+            windows-2022-msys2-ucrt64-vcpkg-a2f9862da6d88040a8537fb9b8cb24deaa9a196b-x64-mingw-dynamic-
 
       - name: Install C++ dependencies
         shell: pwsh
         run: |
-          & "$env:VCPKG_ROOT\vcpkg.exe" install "drogon:x64-windows-static" "curl:x64-windows-static" "nlohmann-json:x64-windows-static" --clean-after-build
+          $dependencies = Get-Content "packaging\vcpkg-dependencies.txt" |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ -and -not $_.StartsWith("#") }
+
+          & "$env:VCPKG_ROOT\vcpkg.exe" install $dependencies --clean-after-build
           if ($LASTEXITCODE -ne 0) { throw "vcpkg dependency installation failed." }
 
       - name: Configure CMake
         shell: pwsh
         run: |
+          $msys2Root = "${{ steps.msys2.outputs.msys2-location }}"
+          $mingwBin = Join-Path $msys2Root "ucrt64\bin"
           $toolchain = Join-Path $env:VCPKG_ROOT "scripts\buildsystems\vcpkg.cmake"
-          $tripletRoot = Join-Path $env:VCPKG_ROOT "installed\x64-windows-static"
+          $cmake = Join-Path $mingwBin "cmake.exe"
+          $ninja = Join-Path $mingwBin "ninja.exe"
+          $gcc = Join-Path $mingwBin "gcc.exe"
+          $gxx = Join-Path $mingwBin "g++.exe"
 
-          # Drogon's legacy FindJsoncpp/FindBrotli modules can select debug\lib
-          # for multi-config Release builds. Pass the exact release libraries.
-          $jsoncpp = Join-Path $tripletRoot "lib\jsoncpp.lib"
-          $brotliDec = Join-Path $tripletRoot "lib\brotlidec.lib"
-          $brotliEnc = Join-Path $tripletRoot "lib\brotlienc.lib"
-          $brotliCommon = Join-Path $tripletRoot "lib\brotlicommon.lib"
+          $cmakeArgs = @(
+            "-S", ".", "-B", "build-release", "-G", "Ninja",
+            "-DCMAKE_MAKE_PROGRAM=$ninja",
+            "-DCMAKE_C_COMPILER=$gcc",
+            "-DCMAKE_CXX_COMPILER=$gxx",
+            "-DCMAKE_TOOLCHAIN_FILE=$toolchain",
+            "-DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic",
+            "-DVCPKG_HOST_TRIPLET=x64-windows",
+            "-DCMAKE_BUILD_TYPE=Release"
+          )
 
-          foreach ($library in @($jsoncpp, $brotliDec, $brotliEnc, $brotliCommon)) {
-            if (!(Test-Path $library)) {
-              throw "Expected Release dependency library was not found: $library"
-            }
-          }
-
-          cmake -S . -B build-release -G "Visual Studio 17 2022" -A x64 `
-            "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
-            "-DVCPKG_TARGET_TRIPLET=x64-windows-static" `
-            "-DJSONCPP_LIBRARIES=$jsoncpp" `
-            "-DBROTLIDEC_LIBRARY=$brotliDec" `
-            "-DBROTLIENC_LIBRARY=$brotliEnc" `
-            "-DBROTLICOMMON_LIBRARY=$brotliCommon"
-
+          & $cmake @cmakeArgs
           if ($LASTEXITCODE -ne 0) { throw "CMake configure failed." }
 
       - name: Build Release
         shell: pwsh
         run: |
-          cmake --build build-release --config Release --parallel
-          if ($LASTEXITCODE -ne 0) { throw "Karen Release build failed." }
+          $cmake = Join-Path "${{ steps.msys2.outputs.msys2-location }}" "ucrt64\bin\cmake.exe"
+          & $cmake --build build-release --parallel
+          if ($LASTEXITCODE -ne 0) { throw "Karen MinGW Release build failed." }
 
       - name: Assemble portable package
         shell: pwsh
@@ -89,15 +135,16 @@ jobs:
           $dist = Join-Path $PWD "dist"
           $stage = Join-Path $dist "Karen"
           $stageFrontend = Join-Path $stage "frontend"
-          $runtime = Join-Path $PWD "build-release\Release"
-          $dependencyBin = Join-Path $env:VCPKG_ROOT "installed\x64-windows-static\bin"
+          $runtime = Join-Path $PWD "build-release"
+          $dependencyBin = Join-Path $env:VCPKG_ROOT "installed\x64-mingw-dynamic\bin"
+          $mingwBin = Join-Path "${{ steps.msys2.outputs.msys2-location }}" "ucrt64\bin"
 
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           New-Item -ItemType Directory -Force -Path $stageFrontend | Out-Null
 
           if (!(Test-Path (Join-Path $runtime "Karen.exe"))) {
-            throw "Karen.exe was not produced by the Release build."
+            throw "Karen.exe was not produced by the MinGW Release build."
           }
           if (!(Test-Path (Join-Path $runtime "frontend\index.html"))) {
             throw "Frontend files were not copied beside Karen.exe."
@@ -109,14 +156,20 @@ jobs:
             throw "The staged frontend is missing index.html."
           }
 
-          # Static triplet should minimize runtime DLL requirements. Include
-          # any DLLs produced by dependencies that choose dynamic linkage.
+          # The x64-mingw-dynamic triplet ships shared dependency DLLs beside the EXE.
           if (Test-Path $dependencyBin) {
             Get-ChildItem $dependencyBin -Filter "*.dll" -File |
               ForEach-Object { Copy-Item $_.FullName $stage -Force }
           }
 
-          Copy-Item "packaging\Start-Karen.vbs" $stage -Force
+          # Include the compiler runtime DLLs required by MinGW-built binaries.
+          foreach ($dll in @("libstdc++-6.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll", "libssp-0.dll")) {
+            $runtimeDll = Join-Path $mingwBin $dll
+            if (Test-Path $runtimeDll) {
+              Copy-Item $runtimeDll $stage -Force
+            }
+          }
+
           Copy-Item "packaging\README.txt" $stage -Force
 
           $zip = Join-Path $PWD "dist\Karen-windows-x64.zip"
@@ -143,8 +196,6 @@ jobs:
     permissions:
       contents: write
     steps:
-      # gh release create needs a checked-out repository to infer the repo
-      # and verify the tag; the build artifact download alone has no .git.
       - name: Checkout source
         uses: actions/checkout@v7
         with:

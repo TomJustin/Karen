@@ -1,7 +1,6 @@
 #include "storage/ProfileStorage.hpp"
 #include "storage/AppDataPaths.hpp"
 
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -36,33 +35,40 @@ bool ProfileStorage::loadProfile(Profile& profile)
     return true;
 }
 
-bool ProfileStorage::setupProfile(Profile& profile)
+bool ProfileStorage::saveProfile(const Profile& profile)
 {
-    // First launch must not block waiting for console input: Karen is a
-    // desktop application whose first-run setup is handled in the browser.
-    profile.setUserName("用户");
-    profile.setAiName("Karen");
-    profile.setPersonality("温柔");
-
-    std::ofstream saveProfile(
+    std::ofstream file(
         KarenPaths::getDataFilePath("profile.json"),
         std::ios::binary | std::ios::trunc
     );
 
-    if (!saveProfile)
+    if (!file)
     {
-        std::cerr << "无法保存 profile.json" << std::endl;
+        std::cerr << "无法打开 profile.json 进行写入" << std::endl;
         return false;
     }
 
-    saveProfile << profile.toJson().dump(4);
-    saveProfile.close();
+    file << profile.toJson().dump(4);
+    file.close();
 
-    if (!saveProfile)
+    if (!file)
     {
         std::cerr << "写入 profile.json 失败" << std::endl;
         return false;
     }
 
     return true;
+}
+
+bool ProfileStorage::setupProfile(Profile& profile)
+{
+    // First launch initializes a usable profile; users can customize it
+    // from the settings dialog without needing console input.
+    profile.setUserName("用户");
+    profile.setAiName("Karen");
+    profile.setPersonality(
+        "温柔、耐心，交流自然。在日常聊天时轻松亲切，遇到需要分析的问题时认真、清晰地回答。"
+    );
+
+    return saveProfile(profile);
 }

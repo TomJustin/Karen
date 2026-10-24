@@ -1,5 +1,6 @@
 #include "server/ChatServer.hpp"
 #include "network/HttpClient.hpp"
+#include "storage/ProfileStorage.hpp"
 
 #include <drogon/drogon.h>
 #include <nlohmann/json.hpp>
@@ -48,6 +49,32 @@ namespace
             [](unsigned char ch)
             {
                 return std::isspace(ch) != 0 || ch < 0x20 || ch == 0x7f;
+            }
+        );
+    }
+
+    bool containsDisallowedControlCharacters(
+        const std::string& value,
+        bool allowLineBreaks
+    )
+    {
+        return std::any_of(
+            value.begin(),
+            value.end(),
+            [allowLineBreaks](unsigned char ch)
+            {
+                if (ch == 0x7f)
+                {
+                    return true;
+                }
+
+                if (ch >= 0x20)
+                {
+                    return false;
+                }
+
+                return !(allowLineBreaks &&
+                    (ch == '\n' || ch == '\r' || ch == '\t'));
             }
         );
     }
@@ -313,7 +340,176 @@ void ChatServer::start()
 
     /*
      * ==============================
-     * 3. POST /api/chat
+     * 3. 读取个人资料
+     * ==============================
+     */
+
+    drogon::app().registerHandler(
+        "/api/profile",
+        [this](
+            const drogon::HttpRequestPtr&,
+            std::function<void(
+                const drogon::HttpResponsePtr&
+            )>&& callback
+        )
+        {
+            Profile currentProfile;
+            {
+                std::lock_guard<std::mutex> lock(profileMutex);
+                currentProfile = profile;
+            }
+
+            Json::Value response;
+            response["success"] = true;
+            response["profile"]["userName"] = currentProfile.getUserName();
+            response["profile"]["aiName"] = currentProfile.getAiName();
+            response["profile"]["personality"] = currentProfile.getPersonality();
+
+            auto resp =
+                drogon::HttpResponse::newHttpJsonResponse(response);
+
+            resp->addHeader("Cache-Control", "no-store");
+            callback(resp);
+        },
+        {drogon::Get}
+    );
+
+
+    /*
+     * ==============================
+     * 4. 更新个人资料
+     * ==============================
+     */
+
+    drogon::app().registerHandler(
+        "/api/profile",
+        [this](
+            const drogon::HttpRequestPtr& req,
+            std::function<void(
+                const drogon::HttpResponsePtr&
+            )>&& callback
+        )
+        {
+            // Only accept state-changing requests from Karen's local UI.
+            const std::string origin = req->getHeader("origin");
+
+            if (!origin.empty() &&
+                origin != "http://127.0.0.1:8080" &&
+                origin != "http://localhost:8080")
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] = "请求来源不被允许";
+
+                auto resp =
+                    drogon::HttpResponse::newHttpJsonResponse(response);
+
+                resp->setStatusCode(drogon::k403Forbidden);
+                callback(resp);
+                return;
+            }
+
+            auto requestJson = req->getJsonObject();
+
+            if (!requestJson ||
+                !requestJson->isObject() ||
+                !requestJson->isMember("userName") ||
+                !(*requestJson)["userName"].isString() ||
+                !requestJson->isMember("aiName") ||
+                !(*requestJson)["aiName"].isString() ||
+                !requestJson->isMember("personality") ||
+                !(*requestJson)["personality"].isString())
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] =
+                    "请求必须包含 userName、aiName 和 personality 字符串";
+
+                auto resp =
+                    drogon::HttpResponse::newHttpJsonResponse(response);
+
+                resp->setStatusCode(drogon::k400BadRequest);
+                callback(resp);
+                return;
+            }
+
+            const std::string userName =
+                trimWhitespace((*requestJson)["userName"].asString());
+            const std::string aiName =
+                trimWhitespace((*requestJson)["aiName"].asString());
+            const std::string personality =
+                trimWhitespace((*requestJson)["personality"].asString());
+
+            if (userName.empty() ||
+                aiName.empty() ||
+                personality.empty() ||
+                userName.size() > 1024 ||
+                aiName.size() > 1024 ||
+                personality.size() > 12000 ||
+                containsDisallowedControlCharacters(userName, false) ||
+                containsDisallowedControlCharacters(aiName, false) ||
+                containsDisallowedControlCharacters(personality, true))
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] =
+                    "请填写有效的姓名和性格描述，并确保内容没有超出长度限制";
+
+                auto resp =
+                    drogon::HttpResponse::newHttpJsonResponse(response);
+
+                resp->setStatusCode(drogon::k400BadRequest);
+                callback(resp);
+                return;
+            }
+
+            Profile updatedProfile;
+            {
+                std::lock_guard<std::mutex> lock(profileMutex);
+                updatedProfile = profile;
+                updatedProfile.setUserName(userName);
+                updatedProfile.setAiName(aiName);
+                updatedProfile.setPersonality(personality);
+
+                ProfileStorage storage;
+                if (!storage.saveProfile(updatedProfile))
+                {
+                    Json::Value response;
+                    response["success"] = false;
+                    response["message"] =
+                        "设置未能保存到本机，请检查应用数据目录的写入权限";
+
+                    auto resp =
+                        drogon::HttpResponse::newHttpJsonResponse(response);
+
+                    resp->setStatusCode(drogon::k500InternalServerError);
+                    callback(resp);
+                    return;
+                }
+
+                profile = updatedProfile;
+            }
+
+            Json::Value response;
+            response["success"] = true;
+            response["message"] = "个性化设置已保存";
+            response["profile"]["userName"] = updatedProfile.getUserName();
+            response["profile"]["aiName"] = updatedProfile.getAiName();
+            response["profile"]["personality"] = updatedProfile.getPersonality();
+
+            auto resp =
+                drogon::HttpResponse::newHttpJsonResponse(response);
+
+            resp->addHeader("Cache-Control", "no-store");
+            callback(resp);
+        },
+        {drogon::Post}
+    );
+
+
+    /*
+     * ==============================
+     * 5. POST /api/chat
      * ==============================
      */
 
@@ -456,10 +652,16 @@ void ChatServer::start()
                  * ==============================
                  */
 
+                Profile profileSnapshot;
+                {
+                    std::lock_guard<std::mutex> lock(profileMutex);
+                    profileSnapshot = profile;
+                }
+
                 std::string answer =
                     model.chat(
                         conversation,
-                        profile,
+                        profileSnapshot,
                         memoryStore
                     );
 

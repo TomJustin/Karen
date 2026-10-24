@@ -8,5 +8,7 @@ struct ProfileStorage{
 
     bool loadProfile(Profile& profile);
 
+    bool saveProfile(const Profile& profile);
+
     bool setupProfile(Profile& profile);
 };

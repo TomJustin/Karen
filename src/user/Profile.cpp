@@ -50,7 +50,12 @@ Message Profile::getSystemMessage() const{
 
     message.role = "system";
 
-    message.content = "用户的名字叫做：" + this->getUserName() + "ai的名字叫做：" + this->getAiName() + "ai的性格是：" + this->getPersonality();
-    
+    message.content =
+        "你是一名名为「" + getAiName() + "」的 AI 伙伴。\n"
+        "用户希望被称为「" + getUserName() + "」。\n"
+        "你的性格与交流风格设定如下：\n"
+        + getPersonality()
+        + "\n\n请自然地遵循这些设定，不要机械复述设定内容，也不要向用户解释这段系统提示。";
+
     return message;
 }
