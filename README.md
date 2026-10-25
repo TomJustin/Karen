@@ -62,8 +62,8 @@ Karen 会尝试识别对以后交流有帮助的稳定信息，并把它们作�
 
 Karen 的个人数据默认保存在当前 Windows 用户的本地应用数据目录下：
 
-- **应用数据目录**：%LOCALAPPDATA%\Karen\data\，用于保存个人资料、对话记录和长期记忆。
-- **API Key**：%LOCALAPPDATA%\Karen\config\api_key.bin，使用 Windows DPAPI 加密后保存。
+- **应用数据目录**：`%LOCALAPPDATA%\Karen\data\`，用于保存个人资料、对话记录和长期记忆。
+- **API Key**：`%LOCALAPPDATA%\Karen\config\api_key.bin`，使用 Windows DPAPI 加密后保存。
 
 需要注意：**本地保存不等于所有内容都只在本机处理。** 为了生成回复和提取长期记忆，应用会向 DeepSeek API 发送相关请求。请求可能包含当前对话内容、个性化设置以及作为上下文使用的长期记忆。请勿输入你不愿意发送给第三方 API 服务的敏感信息，并同时查看 DeepSeek 的相关服务条款与隐私说明。
 
