@@ -272,12 +272,31 @@ jobs:
           name: karen-windows-x64
           path: release-assets
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           $tag = $env:GITHUB_REF_NAME
-          gh release create $tag "release-assets/Karen-windows-x64.zip" "release-assets/SHA256SUMS.txt" --verify-tag --generate-notes --title "Karen $tag"
-          if ($LASTEXITCODE -ne 0) { throw "Publishing the GitHub Release failed." }
+
+          # A Release may have been created manually before this workflow runs.
+          # Only create it when it does not exist; always upload the build outputs.
+          gh release view $tag --json tagName *> $null
+          $releaseViewExitCode = $LASTEXITCODE
+
+          if ($releaseViewExitCode -ne 0) {
+            gh release create $tag --verify-tag --generate-notes --title "Karen $tag"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to create the GitHub Release."
+            }
+          }
+
+          gh release upload $tag `
+            "release-assets/Karen-windows-x64.zip" `
+            "release-assets/SHA256SUMS.txt" `
+            --clobber
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Uploading GitHub Release assets failed."
+          }
