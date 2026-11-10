@@ -144,7 +144,9 @@ function openApiKeyDialog(required) {
         ? "欢迎使用 Karen"
         : "配置 DeepSeek API Key";
 
-    apiKeyCancelButton.hidden = required;
+    // A user without a DeepSeek key must still be able to close this dialog
+    // and switch to the local Ollama provider in settings.
+    apiKeyCancelButton.hidden = false;
     apiKeyInput.value = "";
     apiKeyStatus.textContent = "";
 
@@ -153,8 +155,7 @@ function openApiKeyDialog(required) {
 }
 
 function closeApiKeyDialog() {
-    if (setupRequired) return;
-
+    setupRequired = false;
     apiKeyOverlay.hidden = true;
     apiKeyInput.value = "";
     apiKeyStatus.textContent = "";
@@ -496,11 +497,7 @@ clearMemoryButton.addEventListener("click", clearMemoryAndConversation);
 
 apiKeyOverlay.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
-        if (setupRequired) {
-            event.preventDefault();
-        } else {
-            closeApiKeyDialog();
-        }
+        closeApiKeyDialog();
     }
 });
 
