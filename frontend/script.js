@@ -32,13 +32,24 @@ const apiKeySaveButton = document.getElementById("api-key-save");
 const apiKeyCancelButton = document.getElementById("api-key-cancel");
 const apiKeyTitle = document.getElementById("api-key-title");
 
+const modelProviderSelect = document.getElementById("model-provider-select");
+const modelNameInput = document.getElementById("model-name-input");
+const modelSaveButton = document.getElementById("model-save-button");
+const modelStatus = document.getElementById("model-status");
+
 const DEFAULT_PROFILE = Object.freeze({
     userName: "用户",
     aiName: "Karen",
     personality: "温柔、耐心，交流自然。在日常聊天时轻松亲切，遇到需要分析的问题时认真、清晰地回答。"
 });
 
-let hasApiKey = false;
+let modelConfigured = false;
+let activeModelProvider = "deepseek";
+let selectedModelProvider = "deepseek";
+const modelDrafts = {
+    deepseek: "deepseek-flash",
+    ollama: "qwen3:8b"
+};
 let setupRequired = false;
 
 function setProfileStatus(message, isError = false) {
@@ -92,9 +103,13 @@ async function loadProfileSettings() {
     setProfileStatus("正在读取当前设置…");
 
     try {
-        const profile = await requestProfile();
+        const [profile, modelData] = await Promise.all([
+            requestProfile(),
+            requestModelStatus()
+        ]);
         fillProfileForm(profile);
         applyProfileToInterface(profile);
+        updateModelStatus(modelData);
         setProfileStatus("");
     } catch (error) {
         setProfileStatus(
@@ -140,32 +155,117 @@ function closeApiKeyDialog() {
     apiKeyStatus.textContent = "";
 }
 
+function updateModelStatus(data) {
+    activeModelProvider = data.provider || activeModelProvider;
+    selectedModelProvider = activeModelProvider;
+
+    modelProviderSelect.value = activeModelProvider;
+    modelNameInput.value = data.model || modelDrafts[activeModelProvider] || "";
+    modelDrafts[activeModelProvider] = modelNameInput.value;
+
+    modelConfigured = Boolean(data.configured);
+    profileApiKeyButton.hidden = activeModelProvider !== "deepseek";
+
+    modelStatus.textContent = data.message || "";
+    modelStatus.classList.toggle("error", !data.ready);
+    modelStatus.classList.toggle("success", Boolean(data.ready));
+
+    aiNameStatus.textContent = data.ready
+        ? aiNameHeader.textContent + " 在线"
+        : (activeModelProvider === "ollama"
+            ? "Ollama 未就绪"
+            : "等待配置 API Key");
+}
+
+async function requestModelStatus() {
+    const response = await fetch("/api/config/status", {
+        method: "GET",
+        cache: "no-store"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+        throw new Error(data.message || "无法读取模型配置");
+    }
+
+    return data;
+}
+
 async function checkApiKeyStatus() {
     try {
-        const response = await fetch("/api/config/status", {
-            method: "GET",
-            cache: "no-store"
+        const data = await requestModelStatus();
+        updateModelStatus(data);
+
+        if (activeModelProvider === "deepseek" && !modelConfigured) {
+            openApiKeyDialog(true);
+        }
+    } catch (error) {
+        modelConfigured = false;
+        openApiKeyDialog(true);
+        apiKeyStatus.textContent =
+            "暂时无法读取模型配置。请确认 Karen 后端已启动，然后重试。";
+        modelStatus.textContent = error.message || "无法读取模型配置。";
+        modelStatus.classList.add("error");
+        console.error("读取 Karen 模型配置失败：", error);
+    }
+}
+
+async function saveModelSettings() {
+    const provider = modelProviderSelect.value;
+    const model = modelNameInput.value.trim();
+
+    if (!model) {
+        modelStatus.textContent = "请输入模型名称。";
+        modelStatus.classList.add("error");
+        modelNameInput.focus();
+        return;
+    }
+
+    modelSaveButton.disabled = true;
+    modelStatus.textContent = "正在保存并切换模型…";
+    modelStatus.classList.remove("error", "success");
+
+    try {
+        const response = await fetch("/api/model", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ provider, model })
         });
 
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-            throw new Error(data.message || "无法读取配置状态");
+            throw new Error(data.message || "模型切换失败");
         }
 
-        hasApiKey = Boolean(data.configured);
+        updateModelStatus(data);
 
-        if (!hasApiKey) {
+        if (provider === "deepseek" && !modelConfigured) {
             openApiKeyDialog(true);
         }
     } catch (error) {
-        // Keep the setup dialog visible; do not expose the chat UI as usable
-        // when the backend cannot tell whether a key has been configured.
-        openApiKeyDialog(true);
-        apiKeyStatus.textContent =
-            "暂时无法读取配置状态。请确认 Karen 后端已启动，然后重试。";
-        console.error("读取 Karen 配置状态失败：", error);
+        modelStatus.textContent = error.message || "模型切换失败。";
+        modelStatus.classList.add("error");
+        modelStatus.classList.remove("success");
+    } finally {
+        modelSaveButton.disabled = false;
     }
+}
+
+function handleModelProviderChange() {
+    modelDrafts[selectedModelProvider] = modelNameInput.value.trim() ||
+        modelDrafts[selectedModelProvider];
+
+    selectedModelProvider = modelProviderSelect.value;
+    modelNameInput.value = modelDrafts[selectedModelProvider] ||
+        (selectedModelProvider === "ollama" ? "qwen3:8b" : "deepseek-flash");
+
+    profileApiKeyButton.hidden = selectedModelProvider !== "deepseek";
+    modelStatus.textContent = "选择已修改。点击“保存并切换”后生效。";
+    modelStatus.classList.remove("error", "success");
 }
 
 async function saveApiKey(event) {
@@ -198,13 +298,13 @@ async function saveApiKey(event) {
             throw new Error(data.message || "API Key 验证失败");
         }
 
-        hasApiKey = true;
         setupRequired = false;
         apiKeyStatus.textContent = "验证成功，配置已保存。";
         apiKeyInput.value = "";
 
         // Close only after the server has validated and persisted the key.
         apiKeyOverlay.hidden = true;
+        void checkApiKeyStatus();
     } catch (error) {
         apiKeyStatus.textContent =
             error.message || "请求失败，请检查网络后重试。";
@@ -299,7 +399,7 @@ async function clearMemoryAndConversation() {
 async function sendMessage() {
     const message = input.value.trim();
 
-    if (!message || !hasApiKey || sendButton.disabled) return;
+    if (!message || !modelConfigured || sendButton.disabled) return;
 
     const userMessage = document.createElement("p");
     userMessage.classList.add("user-message");
@@ -373,8 +473,13 @@ document.querySelectorAll(".personality-preset").forEach((button) => {
     });
 });
 
+modelProviderSelect.addEventListener("change", handleModelProviderChange);
+modelSaveButton.addEventListener("click", saveModelSettings);
+
 profileApiKeyButton.addEventListener("click", () => {
-    openApiKeyDialog(!hasApiKey);
+    openApiKeyDialog(
+        activeModelProvider === "deepseek" && !modelConfigured
+    );
 });
 
 apiKeyForm.addEventListener("submit", saveApiKey);
