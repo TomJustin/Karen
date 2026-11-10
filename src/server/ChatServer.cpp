@@ -79,6 +79,115 @@ namespace
             }
         );
     }
+
+    bool isKarenLocalOrigin(const std::string& origin)
+    {
+        return origin.empty() ||
+            origin == "http://127.0.0.1:8080" ||
+            origin == "http://localhost:8080";
+    }
+
+    json getActiveModelStatus(const ModelConfig& config)
+    {
+        const ModelSettings settings = config.getModelSettings();
+
+        json status = {
+            {"provider", settings.provider},
+            {"model", settings.model},
+            {"configured", false},
+            {"ready", false},
+            {"message", ""}
+        };
+
+        if (settings.provider == "deepseek")
+        {
+            const bool configured = config.hasApiKey();
+            status["configured"] = configured;
+            status["ready"] = configured;
+            status["message"] = configured
+                ? "DeepSeek API Key 已配置。"
+                : "请先配置 DeepSeek API Key。";
+            return status;
+        }
+
+        if (settings.provider != "ollama")
+        {
+            status["message"] = "当前模型提供商不受支持。";
+            return status;
+        }
+
+        // Selecting Ollama does not require a cloud API Key.
+        status["configured"] = true;
+
+        HttpClient client;
+        const HttpResult result = client.get(
+            config.getOllamaBaseUrl() + "/api/tags",
+            "ollama"
+        );
+
+        if (!result.transportOk)
+        {
+            status["message"] =
+                "无法连接 Ollama。请启动 Ollama，并确认本地服务地址为 "
+                "http://127.0.0.1:11434。";
+            return status;
+        }
+
+        if (result.statusCode != 200)
+        {
+            status["message"] =
+                "Ollama 服务返回 HTTP " +
+                std::to_string(result.statusCode) + "。";
+            return status;
+        }
+
+        try
+        {
+            const json response = json::parse(result.body);
+            if (!response.is_object() ||
+                !response.contains("models") ||
+                !response["models"].is_array())
+            {
+                status["message"] =
+                    "无法识别 Ollama 的模型列表响应。";
+                return status;
+            }
+
+            bool modelFound = false;
+            for (const auto& item : response["models"])
+            {
+                if (!item.is_object() ||
+                    !item.contains("name") ||
+                    !item["name"].is_string())
+                {
+                    continue;
+                }
+
+                const std::string installedName =
+                    item["name"].get<std::string>();
+
+                if (installedName == settings.model ||
+                    installedName == settings.model + ":latest")
+                {
+                    modelFound = true;
+                    break;
+                }
+            }
+
+            status["ready"] = modelFound;
+            status["message"] = modelFound
+                ? "Ollama 已连接，本地模型可用。"
+                : "Ollama 已连接，但没有找到模型 " +
+                    settings.model + "。请先使用 ollama pull 下载模型。";
+        }
+        catch (const json::parse_error&)
+        {
+            status["message"] =
+                "无法解析 Ollama 返回的模型列表。";
+        }
+
+        return status;
+    }
 }
 
 ChatServer::ChatServer(
@@ -130,9 +239,15 @@ void ChatServer::start()
             )>&& callback
         )
         {
+            const json modelStatus = getActiveModelStatus(config);
+
             Json::Value response;
             response["success"] = true;
-            response["configured"] = config.hasApiKey();
+            response["provider"] = modelStatus["provider"].get<std::string>();
+            response["model"] = modelStatus["model"].get<std::string>();
+            response["configured"] = modelStatus["configured"].get<bool>();
+            response["ready"] = modelStatus["ready"].get<bool>();
+            response["message"] = modelStatus["message"].get<std::string>();
 
             auto resp =
                 drogon::HttpResponse::newHttpJsonResponse(response);
@@ -141,6 +256,122 @@ void ChatServer::start()
             callback(resp);
         },
         {drogon::Get}
+    );
+
+
+    /*
+     * ==============================
+     * 选择 / 切换 AI 模型
+     * ==============================
+     */
+
+    drogon::app().registerHandler(
+        "/api/model",
+        [this](
+            const drogon::HttpRequestPtr& req,
+            std::function<void(
+                const drogon::HttpResponsePtr&
+            )>&& callback
+        )
+        {
+            if (!isKarenLocalOrigin(req->getHeader("origin")))
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] = "请求来源不被允许";
+
+                auto resp =
+                    drogon::HttpResponse::newHttpJsonResponse(response);
+                resp->setStatusCode(drogon::k403Forbidden);
+                callback(resp);
+                return;
+            }
+
+            const auto requestJson = req->getJsonObject();
+            if (!requestJson ||
+                !requestJson->isObject() ||
+                !requestJson->isMember("provider") ||
+                !(*requestJson)["provider"].isString() ||
+                !requestJson->isMember("model") ||
+                !(*requestJson)["model"].isString())
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] =
+                    "请求必须包含 provider 和 model 字符串";
+                auto resp =
+                    drogon::HttpResponse::newHttpJsonResponse(response);
+                resp->setStatusCode(drogon::k400BadRequest);
+                callback(resp);
+                return;
+            }
+
+            const std::string provider =
+                trimWhitespace((*requestJson)["provider"].asString());
+            const std::string modelName =
+                trimWhitespace((*requestJson)["model"].asString());
+
+            const bool validProvider =
+                provider == "deepseek" || provider == "ollama";
+
+            const bool validModelName =
+                !modelName.empty() &&
+                modelName.size() <= 128 &&
+                std::all_of(
+                    modelName.begin(),
+                    modelName.end(),
+                    [](unsigned char ch)
+                    {
+                        return std::isalnum(ch) != 0 ||
+                            ch == '-' || ch == '_' || ch == '.' ||
+                            ch == ':' || ch == '/' ;
+                    }
+                );
+
+            if (!validProvider || !validModelName)
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] =
+                    "模型提供商或模型名称无效。";
+                auto resp =
+                    drogon::HttpResponse::newHttpJsonResponse(response);
+                resp->setStatusCode(drogon::k400BadRequest);
+                callback(resp);
+                return;
+            }
+
+            std::lock_guard<std::mutex> stateLock(stateMutex);
+
+            if (!config.saveModelSettings(provider, modelName))
+            {
+                Json::Value response;
+                response["success"] = false;
+                response["message"] =
+                    "无法保存模型设置，请检查本机应用数据目录权限。";
+                auto resp =
+                    drogon::HttpResponse::newHttpJsonResponse(response);
+                resp->setStatusCode(drogon::k500InternalServerError);
+                callback(resp);
+                return;
+            }
+
+            const json modelStatus = getActiveModelStatus(config);
+
+            Json::Value response;
+            response["success"] = true;
+            response["provider"] = modelStatus["provider"].get<std::string>();
+            response["model"] = modelStatus["model"].get<std::string>();
+            response["configured"] = modelStatus["configured"].get<bool>();
+            response["ready"] = modelStatus["ready"].get<bool>();
+            response["message"] = modelStatus["message"].get<std::string>();
+
+            auto resp =
+                drogon::HttpResponse::newHttpJsonResponse(response);
+            resp->addHeader("Cache-Control", "no-store");
+            callback(resp);
+        },
+        {drogon::Post}
     );
 
 
@@ -586,7 +817,7 @@ void ChatServer::start()
         )
         {
             std::lock_guard<std::mutex> stateLock(stateMutex);
-            if (!config.hasApiKey())
+            if (!config.isModelConfigured())
             {
                 Json::Value response;
                 response["success"] = false;
