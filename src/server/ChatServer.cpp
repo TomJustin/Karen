@@ -821,7 +821,7 @@ void ChatServer::start()
             {
                 Json::Value response;
                 response["success"] = false;
-                response["message"] = "请先在设置中配置 DeepSeek API Key";
+                response["message"] = "当前选择的是 DeepSeek，请先配置 API Key，或在设置中切换到 Ollama。";
 
                 auto resp =
                     drogon::HttpResponse::newHttpJsonResponse(response);
