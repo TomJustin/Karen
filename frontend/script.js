@@ -522,4 +522,4 @@ requestProfile()
         console.error("读取 Karen 个人资料失败：", error);
     });
 
-checkApiKeyStatus();
+checkModelStatus();
