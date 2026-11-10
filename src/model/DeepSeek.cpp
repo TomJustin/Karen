@@ -61,7 +61,7 @@
 ){
     nlohmann::json request;
 
-        request["model"] = "deepseek-flash";
+        request["model"] = config.getModelName();
 
         for (const auto& message : messages){
         request["messages"].push_back(
