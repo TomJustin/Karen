@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "chat/Conversation.hpp"
 #include "user/Profile.hpp"
