@@ -9,6 +9,8 @@
 class AIModel{
     public:
 
+    virtual ~AIModel() = default;
+
     virtual std::string chat(
     const Conversation& conversation,
     const Profile& profile,
