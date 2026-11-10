@@ -3,28 +3,44 @@
 #include <mutex>
 #include <string>
 
+struct ModelSettings
+{
+    std::string provider = "deepseek";
+    std::string model = "deepseek-flash";
+};
+
 class ModelConfig
 {
 public:
     ModelConfig();
 
-    // 读取已保存的 Key；没有时兼容旧的环境变量配置
+    // Load the user's saved API Key, retaining compatibility with the old environment variable.
     bool loadApiKey();
-
     std::string getApiKey() const;
-    std::string getModelName() const;
-
-    // 只更新当前进程的内存配置
     bool updateApiKey(const std::string& newApiKey);
-
-    // 将 Key 使用 Windows DPAPI 加密保存，并更新内存配置
     bool saveApiKey(const std::string& newApiKey);
-
     bool hasApiKey() const;
+
+    // Provider and model selection are persisted independently from the API Key.
+    bool loadModelSettings();
+    ModelSettings getModelSettings() const;
+    std::string getModelProvider() const;
+    std::string getModelName() const;
+    bool saveModelSettings(
+        const std::string& provider,
+        const std::string& model
+    );
+    bool isModelConfigured() const;
+
+    std::string getOllamaBaseUrl() const;
 
 private:
     mutable std::mutex apiKeyMutex;
     std::mutex apiKeyPersistenceMutex;
     std::string apiKey;
+
+    mutable std::mutex modelSettingsMutex;
+    std::mutex modelSettingsPersistenceMutex;
+    std::string modelProvider;
     std::string modelName;
 };
