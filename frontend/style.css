@@ -1178,3 +1178,141 @@ body {
     .profile-danger-section { align-items: stretch; flex-direction: column; gap: 12px; }
     .profile-danger-button { width: 100%; }
 }
+
+
+/* Model provider selection */
+.model-settings {
+    margin: 0 0 24px;
+    padding: 17px 18px;
+    border: 1px solid #e9e7f3;
+    border-radius: 14px;
+    background: #fbfaff;
+}
+
+.model-settings-heading h3 {
+    margin: 0 0 5px;
+    color: #484957;
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.model-settings-heading p {
+    margin: 0;
+    color: #858694;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.model-settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 14px;
+    margin-top: 15px;
+}
+
+.model-field {
+    min-width: 0;
+}
+
+.model-field label {
+    display: block;
+    margin-bottom: 7px;
+    color: #484957;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.model-field input,
+.model-field select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 9px 11px;
+    border: 1px solid #dedee8;
+    border-radius: 9px;
+    outline: none;
+    background: #ffffff;
+    color: #2f3037;
+    font: inherit;
+    font-size: 13px;
+}
+
+.model-field input:focus,
+.model-field select:focus {
+    border-color: #a59ae9;
+    box-shadow: 0 0 0 3px rgba(124, 110, 230, 0.12);
+}
+
+.model-settings-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.model-status {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 18px;
+    margin: 0;
+    color: #777986;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.model-status.error {
+    color: #b34d5a;
+}
+
+.model-status.success {
+    color: #43846a;
+}
+
+.model-save-button {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 9px;
+    background: #8173df;
+    color: #ffffff;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.model-save-button:hover:not(:disabled) {
+    background: #7163d0;
+}
+
+.model-save-button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.model-settings-note {
+    margin: 10px 0 0;
+    color: #a0a1ab;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+    .model-settings-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 11px;
+    }
+
+    .model-settings-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .model-save-button {
+        width: 100%;
+    }
+}
