@@ -52,6 +52,8 @@ add_executable(
     src/model/DeepSeek.cpp
     src/model/ModelConfig.cpp
     src/model/ModelFactory.cpp
+    src/model/ModelManager.cpp
+    src/model/Ollama.cpp
 
     src/user/Profile.cpp
 
