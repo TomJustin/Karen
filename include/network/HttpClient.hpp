@@ -16,7 +16,8 @@ public:
     // 发起带 Bearer API Key 的 GET 请求，并返回 HTTP 状态码。
     HttpResult get(
         const std::string& url,
-        const std::string& apiKey
+        const std::string& apiKey,
+        long timeoutMilliseconds = 60000L
     );
 
     std::string post(
