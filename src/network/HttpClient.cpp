@@ -81,7 +81,8 @@ HttpResult HttpClient::get(
 std::string HttpClient::post(
     const std::string& url,
     const std::string& body,
-    const std::string& apiKey
+    const std::string& apiKey,
+    long timeoutMilliseconds
 )
 {
     const std::string authHeader = "Authorization: Bearer " + apiKey;
@@ -98,7 +99,7 @@ std::string HttpClient::post(
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 10000L);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 60000L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeoutMilliseconds);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
     curl_slist* headers = nullptr;
