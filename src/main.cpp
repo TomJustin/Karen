@@ -25,7 +25,7 @@
 #include "storage/ProfileStorage.hpp"
 #include "storage/MemoryStorage.hpp"
 
-#include "model/ModelFactory.hpp"
+#include "model/ModelManager.hpp"
 #include "model/ModelConfig.hpp"
 
 #include "memory/MemoryExtractor.hpp"
@@ -256,18 +256,18 @@ namespace
         ModelConfig config;
         // First-run API Key setup remains inside the existing frontend.
         config.loadApiKey();
+        config.loadModelSettings();
 
         const std::size_t contextMessageCount = 20;
-        std::unique_ptr<AIModel> model =
-            ModelFactory::createModel(config, contextMessageCount);
+        ModelManager model(config, contextMessageCount);
 
-        MemoryExtractor extractor(*model);
+        MemoryExtractor extractor(model);
 
         ChatServer server(
             conversation,
             profile,
             memoryStore,
-            *model,
+            model,
             config,
             conversationStorage,
             memoryStorage,
