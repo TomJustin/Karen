@@ -1,12 +1,17 @@
 #include "model/ModelFactory.hpp"
 #include "model/DeepSeek.hpp"
+#include "model/Ollama.hpp"
+
+#include <stdexcept>
 
 std::unique_ptr<AIModel> ModelFactory::createModel(
     const ModelConfig& config,
     std::size_t contextMessageCount
 )
 {
-        if (config.getModelName() == "deepseek")
+    const std::string provider = config.getModelProvider();
+
+    if (provider == "deepseek")
     {
         return std::make_unique<DeepSeek>(
             config,
@@ -14,5 +19,13 @@ std::unique_ptr<AIModel> ModelFactory::createModel(
         );
     }
 
-    return nullptr;
-} 
+    if (provider == "ollama")
+    {
+        return std::make_unique<Ollama>(
+            config,
+            contextMessageCount
+        );
+    }
+
+    throw std::runtime_error("不支持的 AI 模型提供商：" + provider);
+}
