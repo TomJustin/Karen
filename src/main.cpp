@@ -254,7 +254,7 @@ namespace
             memoryStorage.loadMemories();
 
         ModelConfig config;
-        // First-run API Key setup remains inside the existing frontend.
+        // DeepSeek requires a Key; Ollama can be used without one.
         config.loadApiKey();
         config.loadModelSettings();
 
