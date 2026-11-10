@@ -44,6 +44,7 @@ const DEFAULT_PROFILE = Object.freeze({
 });
 
 let modelConfigured = false;
+let modelReady = false;
 let activeModelProvider = "deepseek";
 let selectedModelProvider = "deepseek";
 const modelDrafts = {
@@ -77,7 +78,11 @@ function applyProfileToInterface(profile) {
     document.title = "Karen — " + aiName;
     aiNameBrand.textContent = aiName;
     aiNameHeader.textContent = aiName;
-    aiNameStatus.textContent = aiName + " 在线";
+    aiNameStatus.textContent = modelReady
+        ? aiName + " 在线"
+        : (activeModelProvider === "ollama"
+            ? "Ollama 未就绪"
+            : "等待配置 API Key");
     aiAvatarBrand.textContent = avatarText;
     aiAvatarHeader.textContent = avatarText;
     input.placeholder = "和 " + aiName + " 说点什么...";
@@ -164,6 +169,7 @@ function updateModelStatus(data) {
     modelDrafts[activeModelProvider] = modelNameInput.value;
 
     modelConfigured = Boolean(data.configured);
+    modelReady = Boolean(data.ready);
     profileApiKeyButton.hidden = activeModelProvider !== "deepseek";
 
     modelStatus.textContent = data.message || "";
@@ -192,7 +198,7 @@ async function requestModelStatus() {
     return data;
 }
 
-async function checkApiKeyStatus() {
+async function checkModelStatus() {
     try {
         const data = await requestModelStatus();
         updateModelStatus(data);
@@ -304,7 +310,7 @@ async function saveApiKey(event) {
 
         // Close only after the server has validated and persisted the key.
         apiKeyOverlay.hidden = true;
-        void checkApiKeyStatus();
+        void checkModelStatus();
     } catch (error) {
         apiKeyStatus.textContent =
             error.message || "请求失败，请检查网络后重试。";
