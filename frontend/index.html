@@ -169,6 +169,50 @@
             </header>
 
             <form id="profile-form">
+                <section class="model-settings" aria-labelledby="model-settings-title">
+                    <div class="model-settings-heading">
+                        <div>
+                            <h3 id="model-settings-title">AI 模型</h3>
+                            <p>选择本地 Ollama 或云端 DeepSeek。切换会立即应用，并保存在本机。</p>
+                        </div>
+                    </div>
+
+                    <div class="model-settings-grid">
+                        <div class="model-field">
+                            <label for="model-provider-select">模型提供商</label>
+                            <select id="model-provider-select">
+                                <option value="ollama">Ollama（本地模型）</option>
+                                <option value="deepseek">DeepSeek（云端模型）</option>
+                            </select>
+                        </div>
+
+                        <div class="model-field">
+                            <label for="model-name-input">模型名称</label>
+                            <input
+                                id="model-name-input"
+                                type="text"
+                                maxlength="128"
+                                autocomplete="off"
+                                spellcheck="false"
+                                placeholder="例如：qwen3:8b"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="model-settings-footer">
+                        <p id="model-status" class="model-status" role="status" aria-live="polite">
+                            正在读取模型配置…
+                        </p>
+                        <button id="model-save-button" class="model-save-button" type="button">
+                            保存并切换
+                        </button>
+                    </div>
+
+                    <p class="model-settings-note">
+                        Ollama 默认连接本机的 http://127.0.0.1:11434，不需要 API Key。使用前请确保 Ollama 正在运行且已下载对应模型。
+                    </p>
+                </section>
+
                 <div class="profile-fields">
                     <div class="profile-field">
                         <label for="profile-user-name">我希望被怎么称呼</label>
@@ -232,7 +276,7 @@
                 <p id="profile-status" class="profile-status" role="status" aria-live="polite"></p>
 
                 <div class="profile-actions">
-                    <button id="profile-api-key" class="profile-secondary" type="button">配置 API Key</button>
+                    <button id="profile-api-key" class="profile-secondary" type="button">配置 DeepSeek API Key</button>
                     <div class="profile-actions-right">
                         <button id="profile-reset" class="profile-secondary" type="button">恢复默认</button>
                         <button id="profile-save" class="profile-save" type="submit">保存设置</button>
