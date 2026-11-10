@@ -1,8 +1,12 @@
 #include "model/ModelConfig.hpp"
+#include "storage/AppDataPaths.hpp"
+
+#include <nlohmann/json.hpp>
 
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <cctype>
 #include <limits>
 #include <system_error>
 #include <utility>
@@ -232,7 +236,8 @@ namespace
 }
 
 ModelConfig::ModelConfig()
-    : modelName("deepseek")
+    : modelProvider("deepseek"),
+      modelName("deepseek-flash")
 {
 }
 
@@ -280,7 +285,167 @@ std::string ModelConfig::getApiKey() const
 
 std::string ModelConfig::getModelName() const
 {
+    std::lock_guard<std::mutex> lock(modelSettingsMutex);
     return modelName;
+}
+
+std::string ModelConfig::getModelProvider() const
+{
+    std::lock_guard<std::mutex> lock(modelSettingsMutex);
+    return modelProvider;
+}
+
+ModelSettings ModelConfig::getModelSettings() const
+{
+    std::lock_guard<std::mutex> lock(modelSettingsMutex);
+    return {modelProvider, modelName};
+}
+
+std::string ModelConfig::getOllamaBaseUrl() const
+{
+    return "http://127.0.0.1:11434";
+}
+
+bool ModelConfig::loadModelSettings()
+{
+    try
+    {
+        const std::filesystem::path path =
+            KarenPaths::getDataFilePathForRead("model_settings.json");
+
+        std::ifstream input(path, std::ios::binary);
+        if (!input)
+        {
+            return false;
+        }
+
+        nlohmann::json data;
+        input >> data;
+
+        if (!data.is_object() ||
+            !data.contains("provider") ||
+            !data["provider"].is_string() ||
+            !data.contains("model") ||
+            !data["model"].is_string())
+        {
+            return false;
+        }
+
+        const std::string provider = data["provider"].get<std::string>();
+        const std::string model = data["model"].get<std::string>();
+
+        if ((provider != "deepseek" && provider != "ollama") ||
+            model.empty() ||
+            model.size() > 128)
+        {
+            return false;
+        }
+
+        for (unsigned char ch : model)
+        {
+            if (std::isspace(ch) != 0 || ch < 0x20 || ch == 0x7f)
+            {
+                return false;
+            }
+        }
+
+        std::lock_guard<std::mutex> lock(modelSettingsMutex);
+        modelProvider = provider;
+        modelName = model;
+        return true;
+    }
+    catch (...)
+    {
+        // Invalid or inaccessible settings must not prevent Karen from starting.
+        return false;
+    }
+}
+
+bool ModelConfig::saveModelSettings(
+    const std::string& provider,
+    const std::string& model
+)
+{
+    if ((provider != "deepseek" && provider != "ollama") ||
+        model.empty() ||
+        model.size() > 128)
+    {
+        return false;
+    }
+
+    for (unsigned char ch : model)
+    {
+        if (std::isspace(ch) != 0 || ch < 0x20 || ch == 0x7f)
+        {
+            return false;
+        }
+    }
+
+    std::lock_guard<std::mutex> persistenceLock(modelSettingsPersistenceMutex);
+
+    try
+    {
+        const std::filesystem::path path =
+            KarenPaths::getDataFilePath("model_settings.json");
+        std::filesystem::path temporaryPath = path;
+        temporaryPath += L".tmp";
+
+        nlohmann::json data = {
+            {"provider", provider},
+            {"model", model}
+        };
+
+        bool writeSucceeded = false;
+        {
+            std::ofstream output(
+                temporaryPath,
+                std::ios::binary | std::ios::trunc
+            );
+
+            if (output)
+            {
+                output << data.dump(4);
+                output.flush();
+                writeSucceeded = static_cast<bool>(output);
+                output.close();
+                writeSucceeded = writeSucceeded && !output.fail();
+            }
+        }
+
+        if (!writeSucceeded)
+        {
+            std::error_code error;
+            std::filesystem::remove(temporaryPath, error);
+            return false;
+        }
+
+        if (!MoveFileExW(
+                temporaryPath.c_str(),
+                path.c_str(),
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        {
+            std::error_code error;
+            std::filesystem::remove(temporaryPath, error);
+            return false;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(modelSettingsMutex);
+            modelProvider = provider;
+            modelName = model;
+        }
+
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+bool ModelConfig::isModelConfigured() const
+{
+    return getModelProvider() == "ollama" || hasApiKey();
 }
 
 bool ModelConfig::updateApiKey(const std::string& newApiKey)
