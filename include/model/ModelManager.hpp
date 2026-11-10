@@ -3,6 +3,7 @@
 #include "model/AIModel.hpp"
 #include "model/ModelConfig.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <mutex>
 #include <string>
